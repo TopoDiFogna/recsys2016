@@ -95,8 +95,8 @@ class TopPop(object):
         else:
             train_csc = train
         item_pop = (train_csc > 0).sum(axis=0)  # this command returns a numpy.matrix of size (1, nitems)
-        item_pop = np.asarray(item_pop).squeeze()  # necessary to convert it into a numpy.array of size (nitems,)
-        self.pop = np.argsort(item_pop)[::-1]
+        item_pop = np.asarray(item_pop).squeeze()  # necessary to convert it into a numpy.array of size (nitems)
+        self.pop = np.argsort(item_pop)[::-1]  # sorts the array by specifying the indexes of the elements (reversed)
 
     def recommend(self, profile, k=None, exclude_seen=True):
         unseen_mask = np.in1d(self.pop, profile, assume_unique=True, invert=True)
@@ -109,10 +109,10 @@ parser.add_argument('dataset')
 parser.add_argument('--holdout_perc', type=float, default=0.8)
 parser.add_argument('--header', type=int, default=None)
 parser.add_argument('--columns', type=str, default=None)
-parser.add_argument('--sep', type=str, default=',')
+parser.add_argument('--sep', type=str, default='\t')
 parser.add_argument('--user_key', type=str, default='user_id')
 parser.add_argument('--item_key', type=str, default='item_id')
-parser.add_argument('--rating_key', type=str, default='rating')
+parser.add_argument('--rating_key', type=str, default='interaction_type')
 parser.add_argument('--rnd_seed', type=int, default=1234)
 args = parser.parse_args()
 
@@ -147,7 +147,7 @@ roc_auc_, precision_, recall_, map_, mrr_, ndcg_ = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 at = 5
 neval = 0
 for test_user in range(nusers):
-    user_profile = train[test_user].indices  # what is doing here?
+    user_profile = train[test_user].indices  # items that the user has interacted with?
     relevant_items = test[test_user].indices
     if len(relevant_items) > 0:
         neval += 1
@@ -156,15 +156,15 @@ for test_user in range(nusers):
         # WARNING: there is a catch with the item idx!
         #
         # this will rank *all* items
-        recommended_items = recommender.recommend(user_profile, exclude_seen=True)
+        # recommended_items = recommender.recommend(user_profile, exclude_seen=True)
         # use this to have the *top-k* recommended items (warning: this can underestimate ROC-AUC for small k)
-        # recommended_items = recommender.recommend(user_profile, k=at, exclude_seen=True)
+        recommended_items = recommender.recommend(user_profile, k=at, exclude_seen=True)
         roc_auc_ += roc_auc(recommended_items, relevant_items)
         precision_ += precision(recommended_items, relevant_items, at=at)
         recall_ += recall(recommended_items, relevant_items, at=at)
         map_ += map(recommended_items, relevant_items, at=at)
         mrr_ += rr(recommended_items, relevant_items, at=at)
-        ndcg_ += ndcg(recommended_items, relevant_items, relevance=test[test_user].data, at=at)
+        # ndcg_ += ndcg(recommended_items, relevant_items, relevance=test[test_user].data, at=at)
 roc_auc_ /= neval
 precision_ /= neval
 recall_ /= neval
