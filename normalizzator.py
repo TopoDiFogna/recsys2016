@@ -4,7 +4,9 @@ import numpy as np
 
 items = pd.read_table("data\item_profile.csv",header=0,sep="\t")
 tic=dt.now()
+result= pd.DataFrame(index=range(len(items.index.values)), columns=items.columns.values)
 print(isinstance(items.latitude[8], np.float64))
+
 for index,row in items.iterrows() :
     row["career_level"] /= 6
     row["discipline_id"] /= 23
@@ -17,7 +19,7 @@ for index,row in items.iterrows() :
         row["country"] = 0,66
     elif country == "ch" :
         row["country"] = 0,99
-    elif country == "non_datch":
+    elif country == "non_dach":
         row["country"] = 0
 
     row["region"] /= 16
@@ -38,10 +40,9 @@ for index,row in items.iterrows() :
 
     row["region"] /= 5
 
-# tagsPlusItems=tagDF.merge(titleDF)
-# bigItem=items.merge(tagsPlusItems)
-#
-# with open("big_item.csv", "w") as f:
-#     items.to_csv(f, sep=',')
-#
-# print(items[1])
+    result.loc[index]=row
+
+##TODO sistemare i campi e droppare le ultime due colonne
+
+with open("normalized.csv", "w") as f:
+    result.to_csv(f, sep=',')
