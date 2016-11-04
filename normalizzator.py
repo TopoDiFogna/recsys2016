@@ -5,7 +5,6 @@ import numpy as np
 items = pd.read_table("data\item_profile.csv",header=0,sep="\t")
 tic=dt.now()
 result= pd.DataFrame(index=range(len(items.index.values)), columns=items.columns.values)
-print(isinstance(items.latitude[8], np.float64))
 
 for index,row in items.iterrows() :
     row["career_level"] /= 6
@@ -14,11 +13,11 @@ for index,row in items.iterrows() :
 
     country=row["country"]
     if country == "de" :
-        row["country"] = 0,33
+        row["country"] = 0.33
     elif country == "at" :
-        row["country"] = 0,66
+        row["country"] = 0.66
     elif country == "ch" :
-        row["country"] = 0,99
+        row["country"] = 0.99
     elif country == "non_dach":
         row["country"] = 0
 
@@ -27,9 +26,9 @@ for index,row in items.iterrows() :
     latitude=row["latitude"]
     if isinstance(latitude, np.float64):
         latitude = 0
-    elif latitude <0  :
+    elif latitude <0 :
         latitude = 90 + abs(latitude)
-    row["latitude"]=latitude/180
+    row["latitude"] = latitude/180
 
     longitude = row["longitude"]
     if isinstance(longitude,np.float64):
@@ -40,9 +39,11 @@ for index,row in items.iterrows() :
 
     row["region"] /= 5
 
+    row["employment"] /= 5
+
     result.loc[index]=row
 
-##TODO sistemare i campi e droppare le ultime due colonne
+result.fillna(0)
 
 with open("normalized.csv", "w") as f:
-    result.to_csv(f, sep=',')
+    result.to_csv(f, sep=',',index=False)
