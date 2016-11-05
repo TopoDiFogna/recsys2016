@@ -7,6 +7,7 @@ tic=dt.now()
 result= pd.DataFrame(index=range(len(items.index.values)), columns=items.columns.values)
 
 for index,row in items.iterrows() :
+
     row["career_level"] /= 6
     row["discipline_id"] /= 23
     row["industry_id"] /=23
