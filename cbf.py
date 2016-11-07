@@ -3,7 +3,6 @@ import pandas as pd
 from scipy.sparse import coo_matrix
 from datetime import datetime as dt
 
-
 def apply_shrinkage(self, X, sim):
     #  TODO: compute the shrunk similarity
     # create an "indicator" version of X
@@ -16,11 +15,11 @@ def apply_shrinkage(self, X, sim):
     sim *= co_counts * (co_counts + self.shrinkage)
     return sim
 
+def computeNormalization(dataset) :
 
-def computeCosine(X, shrinkage):
     # 1) normalize the column of X
     # compute the column-wise norms
-    Xsq = X.copy()
+    Xsq = dataset.copy()
     Xsq.data **= 2  # element-+wise square of X
     norm = np.sqrt(Xsq.sum(axis=0))  # matrix[1,M]
     norm = np.asarray(norm).ravel()  # array(M)
@@ -28,25 +27,38 @@ def computeCosine(X, shrinkage):
 
     # compute the number of nonzeroes in each column
     # NOTE: works only if X is csc!!!
-    col_nnz = np.diff(X.indptr)
+    col_nnz = np.diff(dataset.indptr)
     # then
     # normalize the values in each columns
-    X.data /= np.repeat(norm, col_nnz)
+    dataset.data /= np.repeat(norm, col_nnz)
+
+    return dataset
+
+def computeCosine(itemIndex, alreadyRatedItems, datasetNormalized, shrinkage):
+
+    slice=datasetNormalized.getcol(itemIndex)
 
     # 2) compute the cosine similarity
-    sim = X.T.dot(X).toarray()
+    sim = slice.T.dot(datasetNormalized).toarray()
     # zero-out the diagonal
-    np.fill_diagonal(sim, 0)
+    zeroToReplace=np.empty_like(itemIndex)
+    np.put(sim,itemIndex,zeroToReplace)
 
-    if shrinkage > 0.:
-        sim = apply_shrinkage(X, sim)
+    # non credo che sia necessario questo snippet
+    # if shrinkage > 0.:
+    #     sim = apply_shrinkage(datasetNormalized, sim)
 
     return sim
 
 
+##TODO rendere funzione la parte che fa la matrice per una migliore leggibilità del codice
+##TODO implementare la funzione per calcolare i ratings dato un poll di user_id
+##TODO scrivere la parte di script che calcola tutti gli user_id dei sample e buttarli in pasto alla funzione citata sopra
+##TODO scrivere il nuovo file di reccomendations.csv
+
 items = pd.read_table("data/item_profile.csv", sep="\t")
 items.fillna("0", inplace=True)
-items=items[items.active_during_test == 1]
+#items=items[items.active_during_test == 1]
 tagdf = pd.read_csv("tag_matrix.csv", header=0)
 title = pd.read_csv("title_matrix.csv", header=None).drop(1, axis=1)
 
@@ -79,7 +91,8 @@ print("Sparse matrix computed in: {}".format(dt.now() - tic))
 print("Sparse matrix shape {}".format(tagsparsematrix.shape))
 print("Computing similarities")
 tic=dt.now()
-transposeMatrix=tagsparsematrix.T.tocsc()
-computeCosine(transposeMatrix.astype(np.float16), 0)
+transposedMatrix=tagsparsematrix.T.tocsc()
+normalizedMatrix=computeNormalization(transposedMatrix.astype(np.float16))
+computeCosine(0, 0,normalizedMatrix,0)
 print("Similarities computed in: {}".format(dt.now() - tic))
 
