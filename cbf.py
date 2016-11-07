@@ -36,7 +36,7 @@ def computeCosine(X, shrinkage):
     # 2) compute the cosine similarity
     sim = X.T.dot(X).toarray()
     # zero-out the diagonal
-    np.fill_diagonal(sim, 0.0)
+    np.fill_diagonal(sim, 0)
 
     if shrinkage > 0.:
         sim = apply_shrinkage(X, sim)
@@ -46,6 +46,7 @@ def computeCosine(X, shrinkage):
 
 items = pd.read_table("data/item_profile.csv", sep="\t")
 items.fillna("0", inplace=True)
+items=items[items.active_during_test == 1]
 tagdf = pd.read_csv("tag_matrix.csv", header=0)
 title = pd.read_csv("title_matrix.csv", header=None).drop(1, axis=1)
 
@@ -73,10 +74,12 @@ for tagelement in tagsArray:
     index += 1
 
 data = np.ones_like(columns)
-tagsparsematrix = coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size)).tocsr()
+tagsparsematrix = coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size))
 print("Sparse matrix computed in: {}".format(dt.now() - tic))
+print("Sparse matrix shape {}".format(tagsparsematrix.shape))
 print("Computing similarities")
 tic=dt.now()
-sim = computeCosine(tagsparsematrix.tocsc().astype(np.float32), 0)
+transposeMatrix=tagsparsematrix.T.tocsc()
+computeCosine(transposeMatrix.astype(np.float16), 0)
 print("Similarities computed in: {}".format(dt.now() - tic))
 
