@@ -5,32 +5,34 @@ from scipy.sparse import coo_matrix, hstack
 from datetime import datetime as dt
 
 # Loading Data
-items = pd.read_table("data/item_profile.csv", sep="\t",header=0)
+items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
 tagdf = pd.read_csv("tag_matrix.csv", header=0)
 title = pd.read_csv("title_matrix.csv", header=None).drop(1, axis=1)
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
-samples=pd.read_csv("data/sample_submission.csv", header= 0)
+samples = pd.read_csv("data/sample_submission.csv", header=0)
 # End loading data
 
 # Data pre processing
 items.fillna("0", inplace=True)
-items=items.sort(columns="id",axis=0).reset_index()
+items = items.sort(columns="id", axis=0).reset_index()
 itemArray = items.id.values
 filteredItems = items[items.active_during_test == 0].id.values
-filteredItemsIndexes=items[items.active_during_test == 0].index
+filteredItemsIndexes = items[items.active_during_test == 0].index
 columnstodrop = ["title", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
                  "employment", "created_at", "active_during_test"]
-items_dropped=items.drop(columnstodrop, axis=1, inplace=False)
+items_dropped = items.drop(columnstodrop, axis=1, inplace=False)
 tags = pd.Series(index=tagdf.id, data=np.arange(tagdf.index.size))
-samplesIds=samples.user_id.values
+samplesIds = samples.user_id.values
+
 
 # End of data pre processing
 
 
 # Functions
 def getIndexOfItem(item_id):
-    index=items[items["id"] == item_id].index.tolist()[0]
+    index = items[items["id"] == item_id].index.tolist()[0]
     return index
+
 
 def apply_shrinkage(shrinkage, x, sim):
     # create an "indicator" version of X
@@ -64,7 +66,6 @@ def compute_normalization(dataset):
 
 
 def compute_cosine(item_index, already_rated_items, dataset_normalized, shrinkage):
-
     sliced_dataset = dataset_normalized.getcol(item_index)
 
     # 2) compute the cosine similarity
@@ -81,7 +82,6 @@ def compute_cosine(item_index, already_rated_items, dataset_normalized, shrinkag
 
 
 def createcoomatrix(tags_array):
-
     print("Computing Sparse COO matrix")
     columns = []
     rows = []
@@ -101,7 +101,6 @@ def createcoomatrix(tags_array):
 
 
 def getuserratings(userid):
-
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
         "created_at", 1)
     sampleinteractions = sampleinteractions.groupby(by='item_id', as_index=False).apply(
@@ -110,12 +109,12 @@ def getuserratings(userid):
     return sampleRatings
 
 
-def getuseritems(userid) :
+def getuseritems(userid):
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
         "created_at", 1)
-    if(sampleinteractions.empty):
+    if sampleinteractions.empty:
         return []
-    else :
+    else:
         sampleinteractions = sampleinteractions.groupby(by='item_id', as_index=False).apply(
             lambda x: x.ix[x.interaction_type.idxmax()])
         sampleItems = sampleinteractions.item_id.values
@@ -123,16 +122,18 @@ def getuseritems(userid) :
     return 0
 
 
-def compute_ratings(sim_matrix, sampleRating):    # sim_matrix: all items x rated items
+def compute_ratings(sim_matrix, sampleRating):  # sim_matrix: all items x rated items
 
-    rated_sim=sim_matrix.copy()
-    rated_sim=rated_sim.multiply(sampleRating)
-    numerator=np.array(rated_sim.sum(axis=1)).flatten()
-    denominator=np.array(sim_matrix.sum(axis=1)).flatten()
-    return numerator/denominator
+    rated_sim = sim_matrix.copy()
+    rated_sim = rated_sim.multiply(sampleRating)
+    numerator = np.array(rated_sim.sum(axis=1)).flatten()
+    denominator = np.array(sim_matrix.sum(axis=1)).flatten()
+    return numerator / denominator
 
-def getitemsid(item_indexes) :
+
+def getitemsid(item_indexes):
     return items.loc[item_indexes].id.values
+
 
 # TODO scrivere il nuovo file di reccomendations.csv
 
@@ -145,38 +146,37 @@ print("Computing similarities")
 transposedMatrix = tagsparsematrix.T.tocsc()
 normalizedMatrix = compute_normalization(transposedMatrix.astype(np.float16))
 
-restult=pd.DataFrame(index=np.arange(samplesIds.size),columns=samples.columns.values)
+restult = pd.DataFrame(index=np.arange(samplesIds.size), columns=samples.columns.values)
 
-#Start computing ratings for every sample_id
+# Start computing ratings for every sample_id
 columns = ['user_id', 'recommended_items']
 df = pd.DataFrame(index=range(10000), columns=columns)
 zero_to_replace = np.empty_like(filteredItems)
-index=0
-tic = dt.now()
-for user_id in samplesIds :
-    items_Rated=getuseritems(user_id)
-    items_reccomended=[]
-    if(len(items_Rated) == 0 ) :
-        items_reccomended=np.array([1053452, 2778525 ,1244196, 1386412, 657183])
-    else :
+index = 0
+totaltic = dt.now()
+for user_id in samplesIds:
+    tic = dt.now()
+    items_Rated = getuseritems(user_id)
+    items_reccomended = []
+    if len(items_Rated) == 0:
+        items_reccomended = np.array([1053452, 2778525, 1244196, 1386412, 657183])
+    else:
         rated_ids = list(map(getIndexOfItem, items_Rated))
-        sim=compute_cosine(rated_ids[0],rated_ids,normalizedMatrix,0)
-        rated_ids_new=list(rated_ids)
+        sim = compute_cosine(rated_ids[0], rated_ids, normalizedMatrix, 0)
+        rated_ids_new = list(rated_ids)
         rated_ids.pop(0)
-        for id in rated_ids :
-            new_sim_col=compute_cosine(id,rated_ids_new,normalizedMatrix,0)
+        for id in rated_ids:
+            new_sim_col = compute_cosine(id, rated_ids_new, normalizedMatrix, 0)
             sim = hstack([sim, new_sim_col])
-        ratings=compute_ratings(sim,getuserratings(user_id))
+        ratings = compute_ratings(sim, getuserratings(user_id))
         np.put(ratings, filteredItemsIndexes, zero_to_replace)
-        top_rated_items_id=ratings.argsort()[-5:][::-1]
-        items_reccomended=getitemsid(top_rated_items_id)
+        top_rated_items_id = ratings.argsort()[-5:][::-1]
+        items_reccomended = getitemsid(top_rated_items_id)
     df.loc[index] = [user_id, re.sub('[\[\]]', '', np.array_str(items_reccomended))]
     print("Similarities for {} one user computed in: {}".format(index, dt.now() - tic))
-    index+=1
+    index += 1
+print("All similarities computed in {}".format(dt.now() - totaltic))
+# End of computing similarities
 
 with open("recommendations_new.csv", "w") as f:
     df.to_csv(f, sep=',', index=False)
-
-
-
-#End of computing similarities
