@@ -114,12 +114,12 @@ def getuseritems(userid) :
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
         "created_at", 1)
     if(sampleinteractions.empty):
-        return 0
+        return []
     else :
         sampleinteractions = sampleinteractions.groupby(by='item_id', as_index=False).apply(
             lambda x: x.ix[x.interaction_type.idxmax()])
         sampleItems = sampleinteractions.item_id.values
-        return sampleItems
+        return sampleItems.tolist()
     return 0
 
 
@@ -154,10 +154,10 @@ zero_to_replace = np.empty_like(filteredItems)
 index=0
 tic = dt.now()
 for user_id in samplesIds :
-    items_Rated=getuseritems(user_id).tolist()
+    items_Rated=getuseritems(user_id)
     items_reccomended=[]
-    if(items_Rated == 0 ) :
-        items_reccomended=["1053452", "2778525" ,"1244196", "1386412", "657183"]
+    if(len(items_Rated) == 0 ) :
+        items_reccomended=np.array([1053452, 2778525 ,1244196, 1386412, 657183])
     else :
         rated_ids = list(map(getIndexOfItem, items_Rated))
         sim=compute_cosine(rated_ids[0],rated_ids,normalizedMatrix,0)
