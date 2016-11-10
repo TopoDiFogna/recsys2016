@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 import re
-from scipy.sparse import coo_matrix, hstack
+from scipy.sparse import coo_matrix, hstack, csc_matrix
 from datetime import datetime as dt
 
 # Loading Data
 items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
 tagdf = pd.read_csv("tag_matrix.csv", header=0)
-title = pd.read_csv("title_matrix.csv", header=None).drop(1, axis=1)
+title = pd.read_csv("title_matrix.csv", header=0)
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 samples = pd.read_csv("data/sample_submission.csv", header=0)
 # End loading data
@@ -18,10 +18,16 @@ items = items.sort(columns="id", axis=0).reset_index()
 itemArray = items.id.values
 filteredItems = items[items.active_during_test == 0].id.values
 filteredItemsIndexes = items[items.active_during_test == 0].index
-columnstodrop = ["title", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
+columnstodrop_tag = ["title", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
                  "employment", "created_at", "active_during_test"]
-items_dropped = items.drop(columnstodrop, axis=1, inplace=False)
+columnstodrop_title = ["tags", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
+                 "employment", "created_at", "active_during_test"]
+columnstodrop= ["tags", "title", "created_at", "active_during_test", "longitude", "latitude", "country", "region", "employment"]
+items_tags_dropped = items.drop(columnstodrop_tag, axis=1, inplace=False)
+items_title_dropped = items.drop(columnstodrop_title, axis=1, inplace=False)
+items_other_dropped= items.drop(columnstodrop,axis=1,inplace=False)
 tags = pd.Series(index=tagdf.id, data=np.arange(tagdf.index.size))
+titles= pd.Series(index=title.id, data=np.arange(title.index.size))
 samplesIds = samples.user_id.values
 
 
@@ -29,6 +35,14 @@ samplesIds = samples.user_id.values
 
 
 # Functions
+def save_sparse_csc(filename,array):
+    np.savez(filename,data = array.data ,indices=array.indices,
+             indptr =array.indptr, shape=array.shape )
+
+def load_sparse_csc(filename):
+    loader = np.load(filename)
+    return csc_matrix(( loader['data'], loader['indices'], loader['indptr']),
+                         shape = loader['shape'])
 def getIndexOfItem(item_id):
     index = items[items["id"] == item_id].index.tolist()[0]
     return index
@@ -53,7 +67,7 @@ def compute_normalization(dataset):
     xsq.data **= 2  # element-+wise square of X
     norm = np.sqrt(xsq.sum(axis=0))  # matrix[1,M]
     norm = np.asarray(norm).ravel()  # array(M)
-    norm += 1e-6
+    norm += 1e-6 ##TODO sistemare questa cosa.... non è giusta
 
     # compute the number of non zeroes in each column
     # NOTE: works only if X is csc!!!
@@ -61,19 +75,20 @@ def compute_normalization(dataset):
     # then
     # normalize the values in each columns
     dataset.data /= np.repeat(norm, col_nnz)
-
     return dataset
 
 
 def compute_cosine(item_index, already_rated_items, dataset_normalized, shrinkage):
-    sliced_dataset = dataset_normalized.getcol(item_index)
+    sliced_dataset = dataset_normalized.getcol(item_index)ù
 
     # 2) compute the cosine similarity
     sim = sliced_dataset.T.dot(dataset_normalized).toarray()
     # zero-out the diagonal
-    zero_to_replace = np.empty_like(already_rated_items)
-    np.put(sim, already_rated_items, zero_to_replace)
-
+    if(not(len(already_rated_items)==0)) :
+        zero_to_replace = np.empty_like(already_rated_items)
+        np.put(sim, already_rated_items, zero_to_replace)
+    else :
+        np.put(sim,item_index,0)
     # non credo che sia necessario questo snippet
     if shrinkage > 0.:
         sim = apply_shrinkage(shrinkage, dataset_normalized, sim)
@@ -81,7 +96,7 @@ def compute_cosine(item_index, already_rated_items, dataset_normalized, shrinkag
     return coo_matrix(sim).T
 
 
-def createcoomatrix(tags_array):
+def createcoomatrix(tags_array, title_array):
     print("Computing Sparse COO matrix")
     columns = []
     rows = []
@@ -97,7 +112,29 @@ def createcoomatrix(tags_array):
 
     data = np.ones_like(columns)
     print("Sparse matrix computed in: {}".format(dt.now() - tic))
-    return coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size))
+    tag_matrix=coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size))
+
+    columns = []
+    rows = []
+    index = 0
+    tic = dt.now()
+    for tagelement in title_array:
+        if tagelement != "0":
+            tagelement = tagelement.split(',')
+            for tag in tagelement:
+                rows.append(index)
+                columns.append(titles.loc[int(tag)])
+        index += 1
+
+    data = np.ones_like(columns)
+    print("Sparse matrix computed in: {}".format(dt.now() - tic))
+    title_matrix=coo_matrix((data, (rows, columns)), shape=(itemArray.size, titles.size))
+
+    print("Sparse matrix computed in: {}".format(dt.now() - tic))
+    intermediate=hstack([tag_matrix,title_matrix])
+    #other_matrix=coo_matrix(other_element.values)
+
+    return intermediate
 
 
 def getuserratings(userid):
@@ -122,13 +159,15 @@ def getuseritems(userid):
     return 0
 
 
-def compute_ratings(sim_matrix, sampleRating):  # sim_matrix: all items x rated items
+def compute_ratings(sim_matrix, sampleRating,sim_total):  # sim_matrix: all items x rated items
 
-    rated_sim = sim_matrix.copy()
-    rated_sim = rated_sim.multiply(sampleRating)
+    rated_sim = sim_matrix.multiply(sampleRating)
     numerator = np.array(rated_sim.sum(axis=1)).flatten()
-    denominator = np.array(sim_matrix.sum(axis=1)).flatten()
-    return numerator / denominator
+    with np.errstate(divide='ignore', invalid='ignore'):
+        result = np.true_divide(numerator, sim_total)
+        result[result == np.inf] = 0
+        result = np.nan_to_num(result)
+    return result
 
 
 def getitemsid(item_indexes):
@@ -138,22 +177,34 @@ def getitemsid(item_indexes):
 # TODO scrivere il nuovo file di reccomendations.csv
 
 # Computing the COO matrix
-tagsparsematrix = createcoomatrix(items_dropped.tags.values)
-print("Sparse matrix shape {}".format(tagsparsematrix.shape))
+# tagsparsematrix = createcoomatrix(items_tags_dropped.tags.values,items_title_dropped.title.values)
+# print("Sparse matrix shape {}".format(tagsparsematrix.shape))
+# transposedMatrix = tagsparsematrix.T.tocsc()
+# normalizedMatrix = compute_normalization(transposedMatrix.astype(np.float16))
+tic=dt.now()
+normalizedMatrix = load_sparse_csc("normalizedMatrix.npz")
+#save_sparse_csc("normalizedMatrix",normalizedMatrix)
+print("computation load_Normalized_matrix {}".format( dt.now() - tic))
+print("Sparse matrix shape {}".format(normalizedMatrix.shape))
+tic=dt.now()
+#computer sim_table
 
-# Start computing similarities
-print("Computing similarities")
-transposedMatrix = tagsparsematrix.T.tocsc()
-normalizedMatrix = compute_normalization(transposedMatrix.astype(np.float16))
-
-restult = pd.DataFrame(index=np.arange(samplesIds.size), columns=samples.columns.values)
+#sim_total = []
+# tic = dt.now()
+# for id in np.arange(0,itemArray.size-1):
+#     sim = compute_cosine(id, [], normalizedMatrix, 0)
+#     sim_total.append(np.array(sim.sum(axis=0)).flatten()[0])
+#     print("{}ciclo_for_fatto_in {}".format(id, dt.now() - tic))
+# np.save("sim_sum",sim_total)
+sim_total=np.load("sim_sum.npy")
+print("computation sim_total {}".format(dt.now() - tic))
 
 # Start computing ratings for every sample_id
 columns = ['user_id', 'recommended_items']
 df = pd.DataFrame(index=range(10000), columns=columns)
 zero_to_replace = np.empty_like(filteredItems)
-index = 0
 totaltic = dt.now()
+index = 0
 for user_id in samplesIds:
     tic = dt.now()
     items_Rated = getuseritems(user_id)
@@ -168,7 +219,7 @@ for user_id in samplesIds:
         for id in rated_ids:
             new_sim_col = compute_cosine(id, rated_ids_new, normalizedMatrix, 0)
             sim = hstack([sim, new_sim_col])
-        ratings = compute_ratings(sim, getuserratings(user_id))
+        ratings = compute_ratings(sim, getuserratings(user_id), sim_total)
         np.put(ratings, filteredItemsIndexes, zero_to_replace)
         top_rated_items_id = ratings.argsort()[-5:][::-1]
         items_reccomended = getitemsid(top_rated_items_id)
