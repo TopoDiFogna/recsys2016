@@ -19,6 +19,16 @@ itemArray = items.id.values  # list of items ids
 # End of data pre processing
 
 
+def save_sparse_csc(filename, array):
+    np.savez(filename, data=array.data, indices=array.indices,
+             indptr=array.indptr, shape=array.shape)
+
+
+def load_sparse_csc(filename):
+    loader = np.load(filename)
+    return sparse.csc_matrix((loader['data'], loader['indices'], loader['indptr']), shape=loader['shape'])
+
+
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
 def getuserratings(userid):
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
@@ -59,10 +69,8 @@ def compute_similarities(sparse_matrix):
     similarities = sparse.lil_matrix((numrows, numrows))
     for row_index in range(numrows):
         for col_index in range(numcols):
-            tic = dt.now()
             similarities[row_index, col_index] = cosine_similarity(sparse_matrix.getrow(row_index),
                                                                    sparse_matrix.getrow(col_index))
-            print("Similarity computed in {}".format(dt.now() - tic))
     print("Similarities computed in {}".format(dt.now() - tic))
     return similarities
 
@@ -71,8 +79,7 @@ columnstodrop = ["title", "career_level", "discipline_id", "industry_id", "count
                  "employment", "created_at", "active_during_test"]
 # Computing the COO matrix
 tagsparsematrix = createcoomatrix(items.drop(columnstodrop, 1).tags.values)
+# Computing similarities matrix
 similarities_matrix = compute_similarities(tagsparsematrix)
-# Testing Print
-print(similarities_matrix)
-print(tagsparsematrix.getrow(0).toarray())
-print(type(tagsparsematrix.getrow(0).toarray()))
+# Saving Matrix for future use
+save_sparse_csc("similarities", similarities_matrix.tocsc())
