@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-import re
-from scipy.sparse import coo_matrix, hstack
-from scipy import spatial
+from scipy import sparse
 from datetime import datetime as dt
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -51,16 +49,30 @@ def createcoomatrix(tags_array):
 
     data = np.ones_like(columns)
     print("Sparse matrix computed in: {}".format(dt.now() - tic))
-    return coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size))
+    return sparse.coo_matrix((data, (rows, columns)), shape=(itemArray.size, tags.size))
+
+
+def compute_similarities(sparse_matrix):
+    print("Computing Similarities")
+    tic = dt.now()
+    numrows, numcols = sparse_matrix.shape
+    similarities = sparse.lil_matrix((numrows, numrows))
+    for row_index in range(numrows):
+        for col_index in range(numcols):
+            tic = dt.now()
+            similarities[row_index, col_index] = cosine_similarity(sparse_matrix.getrow(row_index),
+                                                                   sparse_matrix.getrow(col_index))
+            print("Similarity computed in {}".format(dt.now() - tic))
+    print("Similarities computed in {}".format(dt.now() - tic))
+    return similarities
 
 
 columnstodrop = ["title", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
                  "employment", "created_at", "active_during_test"]
 # Computing the COO matrix
-tagsparsematrix = createcoomatrix(items.drop(columnstodrop, 1).tags.values).tocsr()
-print(tagsparsematrix[:10])
-
-similarities_sparse = cosine_similarity(tagsparsematrix[:100000], dense_output=False)
-print(similarities_sparse)
-
-
+tagsparsematrix = createcoomatrix(items.drop(columnstodrop, 1).tags.values)
+similarities_matrix = compute_similarities(tagsparsematrix)
+# Testing Print
+print(similarities_matrix)
+print(tagsparsematrix.getrow(0).toarray())
+print(type(tagsparsematrix.getrow(0).toarray()))
