@@ -20,8 +20,7 @@ itemArray = items.id.values  # list of items ids
 
 
 def save_sparse_csc(filename, array):
-    np.savez(filename, data=array.data, indices=array.indices,
-             indptr=array.indptr, shape=array.shape)
+    np.savez(filename, data=array.data, indices=array.indices, indptr=array.indptr, shape=array.shape)
 
 
 def load_sparse_csc(filename):
@@ -38,7 +37,7 @@ def getuserratings(userid):
     if sampleinteractions.empty:
         return np.array([])
     else:
-        return sampleinteractions.interaction_type.values
+        return sampleinteractions.item_id.values
 
 
 # Creates a sparse matrix where rows are items and cols are tags.
@@ -71,15 +70,36 @@ def compute_similarities(sparse_matrix):
         for col_index in range(numcols):
             similarities[row_index, col_index] = cosine_similarity(sparse_matrix.getrow(row_index),
                                                                    sparse_matrix.getrow(col_index))
+        print("finito item {}".format(row_index))
+    print("Similarities computed in {}".format(dt.now() - tic))
+    return similarities
+
+
+def compute_item_similarities(index, sparse_matrix):
+    print("Computing Similarities")
+    tic = dt.now()
+    numrows, numcols = sparse_matrix.shape
+    similarities = sparse.lil_matrix((1, numrows))
+    for col_index in range(numcols):
+        similarities[0, col_index] = cosine_similarity(sparse_matrix.getrow(index), sparse_matrix.getrow(col_index))
     print("Similarities computed in {}".format(dt.now() - tic))
     return similarities
 
 
 columnstodrop = ["title", "career_level", "discipline_id", "industry_id", "country", "region", "latitude", "longitude",
                  "employment", "created_at", "active_during_test"]
-# Computing the COO matrix
+# # Computing the COO matrix
 tagsparsematrix = createcoomatrix(items.drop(columnstodrop, 1).tags.values)
-# Computing similarities matrix
+# # Computing similarities matrix
 similarities_matrix = compute_similarities(tagsparsematrix)
-# Saving Matrix for future use
+# # Saving Matrix for future use
 save_sparse_csc("similarities", similarities_matrix.tocsc())
+
+# for user in samplesIds:
+#     ratings = getuserratings(user)
+#     for rating in ratings:
+#         # item_sim_matrix = compute_item_similarities(items.drop(columnstodrop, 1)[items.id == rating].index.values[0], tagsparsematrix).tocsc()
+#         print(item_sim_matrix.shape)
+#         break
+#     break
+
