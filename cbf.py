@@ -163,11 +163,11 @@ def getuseritems(userid):
 
 
 def compute_ratings(sim_matrix, sampleRating, sim_total):  # sim_matrix: all items x rated items
-
+    denominator = np.array(sim_matrix.sum(axis=1)).flatten()
     rated_sim = sim_matrix.multiply(sampleRating)
     numerator = np.array(rated_sim.sum(axis=1)).flatten()
     with np.errstate(divide='ignore', invalid='ignore'):
-        result = np.true_divide(numerator, sim_total)
+        result = np.true_divide(numerator, denominator)
         result[result == np.inf] = 0
         result = np.nan_to_num(result)
     return result
