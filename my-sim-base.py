@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from collections import Counter
+from datetime import datetime as dt
 
 # Loading Data
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
@@ -9,7 +11,7 @@ items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
 
 # Prepocessing data
 user_ids = samples.user_id.values
-items.fillna(value=0, inplace=True)
+items.fillna(value="0", inplace=True)
 # End of prepocessing data
 
 
@@ -25,16 +27,42 @@ def getuserratings(userid):
         return sampleinteractions.item_id.values
 
 
-def get_user_preferred_data(items):
-    career_level = items.groupby(by="career_level", as_index=False).size().sort_values(ascending=False).index[0]
-    discipline_id = items.groupby(by="discipline_id", as_index=False).size().sort_values(ascending=False).index[0]
-    industry_id = items.groupby(by="industry_id", as_index=False).size().sort_values(ascending=False).index[0]
-    country = items.groupby(by="country", as_index=False).size().sort_values(ascending=False).index[0]
+def get_user_preferred_data(items_rated):
+    career_level = items_rated.groupby(by="career_level", as_index=False).size().sort_values(ascending=False).index[0]
+    discipline_id = items_rated.groupby(by="discipline_id", as_index=False).size().sort_values(ascending=False).index[0]
+    industry_id = items_rated.groupby(by="industry_id", as_index=False).size().sort_values(ascending=False).index[0]
+    country = items_rated.groupby(by="country", as_index=False).size().sort_values(ascending=False).index[0]
     region = 0  # Defaults to this to be safe in case of disasters in the data
     if country == "de":
-        region = items.groupby(by=["country", "region"], as_index=False).size().sort_values(ascending=False).index[0][1]
-    employment = items.groupby(by="employment", as_index=False).size().sort_values(ascending=False).index[0]
+        region = items_rated.groupby(by=["country", "region"], as_index=False).size().sort_values(ascending=False) \
+            .index[0][1]
+    employment = items_rated.groupby(by="employment", as_index=False).size().sort_values(ascending=False).index[0]
     return career_level, discipline_id, industry_id, country, region, employment
+
+
+def most_common_attribute(array):
+    count = Counter(array)
+    freq_list = list(count.values())
+    max_cnt = max(freq_list)
+    total = freq_list.count(max_cnt)
+    most_common = count.most_common(total)
+    return [elem[0] for elem in most_common]
+
+
+def get_titles_ordered(items_rated):
+    titles = np.array([])
+    for title in items_rated.title.values:
+        titles = np.append(titles, title.split(","))
+    most_common = most_common_attribute(titles)
+    return most_common
+
+
+def get_tags_ordered(items_rated):
+    tags = np.array([])
+    for tag in items_rated.title.values:
+        tags = np.append(tags, tag.split(","))
+    most_common = most_common_attribute(tags)
+    return most_common
 
 
 # Filters the items for the user profile
@@ -55,6 +83,7 @@ def recommend(career_level, discipline_id, industry_id, country, region, employm
 
 # groupby_cols = ["career_level", "discipline_id", "industry_id", "country", "region", "employment"]
 for user in user_ids:
+    tic = dt.now()
     ratings = getuserratings(user)
     rated_items = pd.DataFrame(columns=items.columns).astype(np.int32)  # Empty DataFrame to store rated items
     for rating in ratings:
@@ -62,12 +91,23 @@ for user in user_ids:
             rated_items = rated_items.append(items[items.id == rating], ignore_index=True)
     if not rated_items.empty:
         # Saving preferred data
-        mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment = get_user_preferred_data(rated_items)
+        mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment = \
+            get_user_preferred_data(rated_items)
+        mr_titles = get_titles_ordered(rated_items)
+        mr_tags = get_tags_ordered(rated_items)
         # Printing preferred data
-        print("USER {}:\n\tcareer level: {}\n\tdiscipline id: {}\n\tindustry id: {}\n\tcountry: {}\n\tregion: {}\n\temployment: {}"
-               .format(user, mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment))
+        print("USER {}:".format(user))
+        print("\ttitles: {}".format(mr_titles))
+        print("\tcareer level: {}".format(mr_career_level))
+        print("\tdiscipline id: {}".format(mr_discipline_id))
+        print("\tindustry id: {}".format(mr_industry_id))
+        print("\tcountry: {}".format(mr_country))
+        print("\tregion: {}".format(mr_region))
+        print("\temployment: {}".format(mr_employment))
+        print("\ttags: {}".format(mr_tags))
         # Do the recommendations
-        #recommend(mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment)
+        # recommend(mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment)
     else:
         pass  # TODO aggiungere quelli vuoti
+    print("User {} computed in {}".format(user, dt.now()-tic))
     break
