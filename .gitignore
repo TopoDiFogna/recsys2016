@@ -90,3 +90,5 @@ ENV/
 
 # Idea Files
 .idea/
+
+recommendations.csv
