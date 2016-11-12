@@ -67,7 +67,7 @@ def compute_normalization(dataset):
     xsq.data **= 2  # element-+wise square of X
     norm = np.sqrt(xsq.sum(axis=0))  # matrix[1,M]
     norm = np.asarray(norm).ravel()  # array(M)
-
+    norm += 10
     # compute the number of non zeroes in each column
     # NOTE: works only if X is csc!!!
     col_nnz = np.diff(dataset.indptr)
@@ -163,11 +163,11 @@ def getuseritems(userid):
 
 
 def compute_ratings(sim_matrix, sampleRating, sim_total):  # sim_matrix: all items x rated items
-    denominator = np.array(sim_matrix.sum(axis=1)).flatten()
+    # denominator = np.array(sim_matrix.sum(axis=1)).flatten()
     rated_sim = sim_matrix.multiply(sampleRating)
     numerator = np.array(rated_sim.sum(axis=1)).flatten()
     with np.errstate(divide='ignore', invalid='ignore'):
-        result = np.true_divide(numerator, denominator)
+        result = np.true_divide(numerator, sim_total)
         result[result == np.inf] = 0
         result = np.nan_to_num(result)
     return result
@@ -180,27 +180,27 @@ def getitemsid(item_indexes):
 # TODO scrivere il nuovo file di reccomendations.csv
 
 #Computing the COO matrix
-# tagsparsematrix = createcoomatrix(items_tags_dropped.tags.values,items_title_dropped.title.values)
-# print("Sparse matrix shape {}".format(tagsparsematrix.shape))
-# transposedMatrix = tagsparsematrix.T.tocsc()
-# normalizedMatrix = compute_normalization(transposedMatrix.astype(np.float16))
-# save_sparse_csc("normalizedMatrix",normalizedMatrix)
+tagsparsematrix = createcoomatrix(items_tags_dropped.tags.values,items_title_dropped.title.values)
+print("Sparse matrix shape {}".format(tagsparsematrix.shape))
+transposedMatrix = tagsparsematrix.T.tocsc()
+normalizedMatrix = compute_normalization(transposedMatrix.astype(np.float16))
+save_sparse_csc("normalizedMatrix",normalizedMatrix)
 tic=dt.now()
-normalizedMatrix = load_sparse_csc("normalizedMatrix.npz")
+#normalizedMatrix = load_sparse_csc("normalizedMatrix.npz")
 print("computation load_Normalized_matrix {}".format( dt.now() - tic))
 print("Sparse matrix shape {}".format(normalizedMatrix.shape))
 tic=dt.now()
 #computer sim_table
 
-# sim_total = []
-# tic = dt.now()
-# for id in np.arange(0,itemArray.size):
-#     sim = compute_cosine(id, [], normalizedMatrix, 0)
-#     summation=np.array(sim.sum(axis=0)).flatten()[0]
-#     sim_total.append(summation)
-#     print("{}ciclo_for_fatto_in {}".format(id, dt.now() - tic))
-# np.save("sim_sum",sim_total)
-sim_total=np.load("sim_sum.npy")
+sim_total = []
+tic = dt.now()
+for id in np.arange(0,itemArray.size):
+    sim = compute_cosine(id, [], normalizedMatrix, 0)
+    summation=np.array(sim.sum(axis=0)).flatten()[0]
+    sim_total.append(summation)
+    print("{}ciclo_for_fatto_in {}".format(id, dt.now() - tic))
+np.save("sim_sum",sim_total)
+#sim_total=np.load("sim_sum.npy")
 print("computation sim_total {}".format(dt.now() - tic))
 
 # Start computing ratings for every sample_id
