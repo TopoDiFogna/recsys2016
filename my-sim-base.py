@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from collections import Counter
+import operator
 from datetime import datetime as dt
 
 # Loading Data
@@ -74,39 +75,49 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     if region != 0:
         filtered_items = filtered_items[filtered_items.region == region]
 
-    recommended_items = pd.DataFrame(columns=items.columns)
+    recommended_id = {}
     for index, row in filtered_items.iterrows():
         if list(set(tags) & set(row.tags.split(','))) and list(set(title) & set(row.title.split(','))):
-            recommended_items = recommended_items.append(row)
-    print(recommended_items)
+            recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
+    sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
+    recommendations = []
+    for elem in sorted_id[:5]:
+        recommendations.append(elem[0])
+    return recommendations
 
 
-for user in user_ids:
-    tic = dt.now()
-    ratings = getuserratings(user)
-    rated_items = pd.DataFrame(columns=items.columns).astype(np.int32)  # Empty DataFrame to store rated items
-    for rating in ratings:
-        if not ratings.size == 0:
-            rated_items = rated_items.append(items[items.id == rating], ignore_index=True)
-    if not rated_items.empty:
-        # Saving preferred data
-        mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment = \
-            get_user_preferred_data(rated_items)
-        mr_titles = get_titles_ordered(rated_items)
-        mr_tags = get_tags_ordered(rated_items)
-        # Printing preferred data
-        print("USER {}:".format(user))
-        print("\ttitles: {}".format(mr_titles))
-        print("\tcareer level: {}".format(mr_career_level))
-        print("\tdiscipline id: {}".format(mr_discipline_id))
-        print("\tindustry id: {}".format(mr_industry_id))
-        print("\tcountry: {}".format(mr_country))
-        print("\tregion: {}".format(mr_region))
-        print("\temployment: {}".format(mr_employment))
-        print("\ttags: {}".format(mr_tags))
-        # Do the recommendations
-        recommend(mr_career_level, mr_titles, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment, mr_tags)
-    else:
-        pass  # TODO aggiungere quelli vuoti
-    print("User {} computed in {}".format(user, dt.now()-tic))
-    break
+with open("test.csv", "w") as f:
+    for user in user_ids:
+        tic = dt.now()
+        ratings = getuserratings(user)
+        rated_items = pd.DataFrame(columns=items.columns).astype(np.int32)  # Empty DataFrame to store rated items
+        for rating in ratings:
+            if not ratings.size == 0:
+                rated_items = rated_items.append(items[items.id == rating], ignore_index=True)
+
+        if not rated_items.empty:
+            # Saving preferred data
+            mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment = \
+                get_user_preferred_data(rated_items)
+            mr_titles = get_titles_ordered(rated_items)
+            mr_tags = get_tags_ordered(rated_items)
+            # Printing preferred data
+            print("USER {}:".format(user))
+            print("\ttitles: {}".format(mr_titles))
+            print("\tcareer level: {}".format(mr_career_level))
+            print("\tdiscipline id: {}".format(mr_discipline_id))
+            print("\tindustry id: {}".format(mr_industry_id))
+            print("\tcountry: {}".format(mr_country))
+            print("\tregion: {}".format(mr_region))
+            print("\temployment: {}".format(mr_employment))
+            print("\ttags: {}".format(mr_tags))
+            # Do the recommendations
+            recommended_ids = recommend(mr_career_level, mr_titles, mr_discipline_id, mr_industry_id, mr_country,
+                                        mr_region, mr_employment, mr_tags)
+            if len(recommended_ids) < 5:
+                recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO: if we have something wrong recommends top pop
+            print("\trecommendations: {}".format(recommended_ids))
+        else:
+            recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO fix empty user
+        f.write("{},{}".format(user, ' '.join(str(e) for e in recommended_ids)))
+        print("User {} computed in {}".format(user, dt.now()-tic))
