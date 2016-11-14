@@ -8,6 +8,7 @@ from datetime import datetime as dt
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 samples = pd.read_csv("data/sample_submission.csv", header=0)
 items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
+users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
 # End loading data
 
 # Prepocessing data
@@ -41,6 +42,17 @@ def get_user_preferred_data(items_rated):
     return career_level, discipline_id, industry_id, country, region, employment
 
 
+def get_user_profile(user_id):
+    user_row = users[users.user_id == user_id]
+    career_level = user_row.career_level
+    discipline_id = user_row.discipline_id
+    industry_id = user_row.industry_id
+    country = user_row.country
+    region = user_row.region
+    jobroles = user_row.jobroles.split(',')
+    return career_level, discipline_id, industry_id, country, region, jobroles
+
+
 def most_common_attribute(array):
     count = Counter(array)
     return [tag[0] for tag in count.most_common()]
@@ -62,14 +74,35 @@ def get_tags_ordered(items_rated):
     return most_common
 
 
-# Filters the items for the user profile
-def recommend(career_level, title, discipline_id, industry_id, country, region, employment, tags):
-    filtered_items = items[(items.career_level == career_level) &
+def recommend_no_ratings(career_level, discipline_id, industry_id, country, region, jobroles):
+    filtered_items = items[(items.career_level == career_level) &  # TODO check for 0
                            (items.discipline_id == discipline_id) &
                            (items.discipline_id == discipline_id) &
                            (items.industry_id == industry_id) &
                            (items.country == country) &
-                           (items.employment == employment) &
+                           (items.active_during_test == 1)]  # IMPORTANTE!
+    # If region is meaningful we use it
+    if region != 0:
+        filtered_items = filtered_items[filtered_items.region == region]
+    recommended_id = {}
+    for index, row in filtered_items.iterrows():
+        if list(set(jobroles) & set(row.tags.split(','))) and list(set(jobroles) & set(row.title.split(','))):
+            recommended_id[row.id] = len(list(set(jobroles) & set(row.tags.split(','))))  # TODO non so se sia giusto
+    sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
+    recommendations = []
+    for elem in sorted_id[:5]:
+        recommendations.append(elem[0])
+    return recommendations
+
+
+# Filters the items for the user profile
+def recommend(career_level, title, discipline_id, industry_id, country, region, employment, tags):
+    filtered_items = items[(items.career_level == career_level) &  # TODO check for 0
+                           (items.discipline_id == discipline_id) &
+                           (items.discipline_id == discipline_id) &
+                           (items.industry_id == industry_id) &
+                           (items.country == country) &
+                           (items.employment == employment) &  # TODO check for 0
                            (items.active_during_test == 1)]  # IMPORTANTE!
     # If region is meaningful we use it
     if region != 0:
@@ -89,6 +122,7 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
 with open("test.csv", "w") as f:
+    f.write("user_id,recommended_items\n")
     for user in user_ids:
         tic = dt.now()
         ratings = getuserratings(user)
@@ -123,8 +157,9 @@ with open("test.csv", "w") as f:
                 i += 1
             print("\trecommendations: {}".format(recommended_ids))
         else:
-            print("No interactions for user: {}".format(user))
-            recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO fix empty user
+            u_career_level, u_discipline_id, u_industry_id, u_country, u_region, u_jobroles = get_user_profile(user)
+            recommended_ids = recommend_no_ratings(u_career_level, u_discipline_id, u_industry_id, u_country, u_region,
+                                                   u_jobroles)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now()-tic))
 print("Process ended after {}".format(dt.now()-total_tic))
