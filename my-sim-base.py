@@ -111,12 +111,12 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     if region != 0:
         filtered_items = filtered_items[filtered_items.region == region]
 
-    filtered_items.apply(getTagsIntersection(),1,args=(tags)) #instruzione che applica la funzione per ogni riga
+    filtered_items.apply(getTagsIntersection(),axis=1,args=(tags)) #instruzione che applica la funzione per ogni riga
 
     # for index, row in filtered_items.iterrows():
     #     if list(set(tags) & set(row.tags.split(','))) and list(set(title) & set(row.title.split(','))):
     #         recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
-    recommended_id=filtered_items.tags.values.flatten() 
+    recommended_id=filtered_items.tags.values.flatten()
     sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
     recommendations = []
     for elem in sorted_id[:5]:
