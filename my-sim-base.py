@@ -127,6 +127,4 @@ with open("test.csv", "w") as f:
             recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO fix empty user
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now()-tic))
-        if user >10000:
-            break
 print("Process ended after {}".format(dt.now()-total_tic))
