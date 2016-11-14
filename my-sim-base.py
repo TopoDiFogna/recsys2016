@@ -20,6 +20,7 @@ items.fillna(value="0", inplace=True)
 def getitemsid(item_indexes):
     return items.loc[item_indexes].id.values
 
+
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
 def getuserratings(userid):
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
@@ -97,28 +98,30 @@ def recommend_no_ratings(career_level, discipline_id, industry_id, country, regi
         recommendations.append(elem[0])
     return recommendations
 
-def getTagsIntersection (row, tags):
+
+def get_tags_intersection(row, tags):
     if list(set(tags) & set(row.split(','))):
-        element=len(list(set(tags) & set(row.split(','))))
+        element = len(list(set(tags) & set(row.split(','))))
         return element
-    else :
-        return  0 #funzione che fa l'intersezione
+    else:
+        return 0  # funzione che fa l'intersezione
 
 
 # Filters the items for the user profile
 def recommend(career_level, title, discipline_id, industry_id, country, region, employment, tags):
-    filtered_items = items[(items.career_level == career_level) &  # TODO check for 0
-                           (items.discipline_id == discipline_id) &
-                           (items.discipline_id == discipline_id) &
-                           (items.industry_id == industry_id) &
-                           (items.country == country) &
-                           (items.employment == employment) &  # TODO check for 0
-                           (items.active_during_test == 1)]  # IMPORTANTE!
+    # filtered_items = items[(items.career_level == career_level) &  # TODO check for 0
+    #                        (items.discipline_id == discipline_id) &
+    #                        (items.discipline_id == discipline_id) &      # TODO ho tolto i filtri, lavora solo sui tag
+    #                        (items.industry_id == industry_id) &
+    #                        (items.country == country) &
+    #                        (items.employment == employment) &  # TODO check for 0
+    #                        (items.active_during_test == 1)]  # IMPORTANTE!
+    filtered_items = items[items.active_during_test == 1]
     # If region is meaningful we use it
-    if region != 0:
-        filtered_items = filtered_items[filtered_items.region == region]
+    # if region != 0:
+    #     filtered_items = filtered_items[filtered_items.region == region]
 
-    element = filtered_items['tags'].apply((lambda x: getTagsIntersection(x, tags))) #instruzione che applica la funzione per ogni riga
+    element = filtered_items['tags'].apply((lambda x: get_tags_intersection(x, tags))) #instruzione che applica la funzione per ogni riga
     # for index, row in filtered_items.iterrows():
     #     if list(set(tags) & set(row.tags.split(','))) and list(set(title) & set(row.title.split(','))):
     #         recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
@@ -130,7 +133,7 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     # for elem in sorted_id[:5]:
     #     recommendations.append(elem[0])
 
-    return recommendations
+    return recommendations.tolist()
 
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
@@ -170,9 +173,12 @@ with open("test.csv", "w") as f:
                 i += 1
             print("\trecommendations: {}".format(recommended_ids))
         else:
-            u_career_level, u_discipline_id, u_industry_id, u_country, u_region, u_jobroles = get_user_profile(user)
-            recommended_ids = recommend_no_ratings(u_career_level, u_discipline_id, u_industry_id, u_country, u_region,
-                                                   u_jobroles)
+            print("User {} don't have any interaction".format(user))
+            print("Recommending top pop: {}".format(top_pop))
+            recommended_ids = top_pop
+            # u_career_level, u_discipline_id, u_industry_id, u_country, u_region, u_jobroles = get_user_profile(user)
+            # recommended_ids = recommend_no_ratings(u_career_level, u_discipline_id, u_industry_id, u_country, u_region,
+            #                                        u_jobroles)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now()-tic))
 print("Process ended after {}".format(dt.now()-total_tic))
