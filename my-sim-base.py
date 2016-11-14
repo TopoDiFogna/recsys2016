@@ -85,7 +85,7 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
         recommendations.append(elem[0])
     return recommendations
 
-
+total_tic = dt.now()
 with open("test.csv", "w") as f:
     for user in user_ids:
         tic = dt.now()
@@ -119,5 +119,6 @@ with open("test.csv", "w") as f:
             print("\trecommendations: {}".format(recommended_ids))
         else:
             recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO fix empty user
-        f.write("{},{}".format(user, ' '.join(str(e) for e in recommended_ids)))
+        f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now()-tic))
+print("Process ended after {}".format(dt.now()-total_tic))
