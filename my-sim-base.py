@@ -42,11 +42,7 @@ def get_user_preferred_data(items_rated):
 
 def most_common_attribute(array):
     count = Counter(array)
-    freq_list = list(count.values())
-    max_cnt = max(freq_list)
-    total = freq_list.count(max_cnt)
-    most_common = count.most_common(total)
-    return [elem[0] for elem in most_common]
+    return [tag[0] for tag in count.most_common()]
 
 
 def get_titles_ordered(items_rated):
@@ -59,14 +55,14 @@ def get_titles_ordered(items_rated):
 
 def get_tags_ordered(items_rated):
     tags = np.array([])
-    for tag in items_rated.title.values:
+    for tag in items_rated.tags.values:
         tags = np.append(tags, tag.split(","))
     most_common = most_common_attribute(tags)
     return most_common
 
 
 # Filters the items for the user profile
-def recommend(career_level, discipline_id, industry_id, country, region, employment):
+def recommend(career_level, title, discipline_id, industry_id, country, region, employment, tags):
     filtered_items = items[(items.career_level == career_level) &
                            (items.discipline_id == discipline_id) &
                            (items.discipline_id == discipline_id) &
@@ -78,10 +74,13 @@ def recommend(career_level, discipline_id, industry_id, country, region, employm
     if region != 0:
         filtered_items = filtered_items[filtered_items.region == region]
 
-    print(filtered_items)
+    recommended_items = pd.DataFrame(columns=items.columns)
+    for index, row in filtered_items.iterrows():
+        if list(set(tags) & set(row.tags.split(','))) and list(set(title) & set(row.title.split(','))):
+            recommended_items = recommended_items.append(row)
+    print(recommended_items)
 
 
-# groupby_cols = ["career_level", "discipline_id", "industry_id", "country", "region", "employment"]
 for user in user_ids:
     tic = dt.now()
     ratings = getuserratings(user)
@@ -106,7 +105,7 @@ for user in user_ids:
         print("\temployment: {}".format(mr_employment))
         print("\ttags: {}".format(mr_tags))
         # Do the recommendations
-        # recommend(mr_career_level, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment)
+        recommend(mr_career_level, mr_titles, mr_discipline_id, mr_industry_id, mr_country, mr_region, mr_employment, mr_tags)
     else:
         pass  # TODO aggiungere quelli vuoti
     print("User {} computed in {}".format(user, dt.now()-tic))
