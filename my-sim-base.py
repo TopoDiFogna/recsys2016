@@ -83,9 +83,11 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     recommendations = []
     for elem in sorted_id[:5]:
         recommendations.append(elem[0])
+
     return recommendations
 
 total_tic = dt.now()
+top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
 with open("test.csv", "w") as f:
     for user in user_ids:
         tic = dt.now()
@@ -114,11 +116,17 @@ with open("test.csv", "w") as f:
             # Do the recommendations
             recommended_ids = recommend(mr_career_level, mr_titles, mr_discipline_id, mr_industry_id, mr_country,
                                         mr_region, mr_employment, mr_tags)
-            if len(recommended_ids) < 5:
-                recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO: if we have something wrong recommends top pop
+            i = 0
+            while len(recommended_ids) < 5:
+                print("\trecommendations overrided: {}".format(recommended_ids))
+                recommended_ids.append(top_pop[i])
+                i += 1
             print("\trecommendations: {}".format(recommended_ids))
         else:
+            print("No interactions for user: {}".format(user))
             recommended_ids = [1053452, 2778525, 1244196, 1386412, 657183]  # TODO fix empty user
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now()-tic))
+        if user >10000:
+            break
 print("Process ended after {}".format(dt.now()-total_tic))
