@@ -17,6 +17,9 @@ items.fillna(value="0", inplace=True)
 # End of prepocessing data
 
 
+def getitemsid(item_indexes):
+    return items.loc[item_indexes].id.values
+
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
 def getuserratings(userid):
     sampleinteractions = interactions.loc[interactions['user_id'] == userid].reset_index().drop("index", 1).drop(
@@ -94,8 +97,12 @@ def recommend_no_ratings(career_level, discipline_id, industry_id, country, regi
         recommendations.append(elem[0])
     return recommendations
 
-def getTagsIntersection (row, tags) :
-    return  len(list(set(tags) & set(row.tags.split(',')))) #funzione che fa l'intersezione
+def getTagsIntersection (row, tags):
+    if list(set(tags) & set(row.split(','))):
+        element=len(list(set(tags) & set(row.split(','))))
+        return element
+    else :
+        return  0 #funzione che fa l'intersezione
 
 
 # Filters the items for the user profile
@@ -111,16 +118,17 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     if region != 0:
         filtered_items = filtered_items[filtered_items.region == region]
 
-    filtered_items.apply(getTagsIntersection(),axis=1,args=(tags)) #instruzione che applica la funzione per ogni riga
-
+    element = filtered_items['tags'].apply((lambda x: getTagsIntersection(x, tags))) #instruzione che applica la funzione per ogni riga
     # for index, row in filtered_items.iterrows():
     #     if list(set(tags) & set(row.tags.split(','))) and list(set(title) & set(row.title.split(','))):
     #         recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
-    recommended_id=filtered_items.tags.values.flatten()
-    sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
-    recommendations = []
-    for elem in sorted_id[:5]:
-        recommendations.append(elem[0])
+    recommended_id = element.values
+    top_rated_items_id = recommended_id.argsort()[-5:][::-1]
+    recommendations = getitemsid(top_rated_items_id)
+    # sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
+    # recommendations = []
+    # for elem in sorted_id[:5]:
+    #     recommendations.append(elem[0])
 
     return recommendations
 
