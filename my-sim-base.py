@@ -17,8 +17,8 @@ items.fillna(value="0", inplace=True)
 # End of prepocessing data
 
 
-def getitemsid(item_indexes):
-    return items.loc[item_indexes].id.values
+def getitemsid(item_indexes,dataset):
+    return dataset.loc[item_indexes].id.values
 
 
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
@@ -116,7 +116,7 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     #                        (items.country == country) &
     #                        (items.employment == employment) &  # TODO check for 0
     #                        (items.active_during_test == 1)]  # IMPORTANTE!
-    filtered_items = items[items.active_during_test == 1]
+    filtered_items = items[items.active_during_test == 1].reset_index()
     # If region is meaningful we use it
     # if region != 0:
     #     filtered_items = filtered_items[filtered_items.region == region]
@@ -127,13 +127,15 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     #         recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
     recommended_id = element.values
     top_rated_items_id = recommended_id.argsort()[-5:][::-1]
-    recommendations = getitemsid(top_rated_items_id)
+    recommendations = []
+    for elem in top_rated_items_id :
+        recommendations.append(getitemsid(elem, filtered_items))
     # sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
     # recommendations = []
     # for elem in sorted_id[:5]:
     #     recommendations.append(elem[0])
 
-    return recommendations.tolist()
+    return recommendations
 
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
