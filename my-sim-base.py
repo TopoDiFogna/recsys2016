@@ -127,15 +127,13 @@ def recommend(career_level, title, discipline_id, industry_id, country, region, 
     #         recommended_id[row.id] = len(list(set(tags) & set(row.tags.split(','))))
     recommended_id = element.values
     top_rated_items_id = recommended_id.argsort()[-5:][::-1]
-    recommendations = []
-    for elem in top_rated_items_id :
-        recommendations.append(getitemsid(elem, filtered_items))
+    recommendations = getitemsid(top_rated_items_id, filtered_items)
     # sorted_id = sorted(recommended_id.items(), key=operator.itemgetter(1), reverse=True)
     # recommendations = []
     # for elem in sorted_id[:5]:
     #     recommendations.append(elem[0])
 
-    return recommendations
+    return recommendations.tolist()
 
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
