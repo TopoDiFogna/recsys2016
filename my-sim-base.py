@@ -4,17 +4,17 @@ from collections import Counter
 import operator
 from datetime import datetime as dt
 
-# Loading Data
-interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
-samples = pd.read_csv("data/sample_submission.csv", header=0)
-items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
-users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
-# End loading data
-
-# Prepocessing data
-user_ids = samples.user_id.values
-items.fillna(value="0", inplace=True)
-# End of prepocessing data
+# # Loading Data
+# interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
+# samples = pd.read_csv("data/sample_submission.csv", header=0)
+# items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
+# users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
+# # End loading data
+#
+# # Prepocessing data
+# user_ids = samples.user_id.values
+# items.fillna(value="0", inplace=True)
+# # End of prepocessing data
 
 
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
@@ -89,39 +89,39 @@ def recommend_no_ratings(jobroles):
     return recommendations
 
 # Main code of the script
-total_tic = dt.now()
-top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
-with open("test.csv", "w") as f:
-    f.write("user_id,recommended_items\n")
-    for user in user_ids:
-        tic = dt.now()
-        ratings = getuserratings(user)
-        rated_items = pd.DataFrame(columns=items.columns).astype(np.int32)
-        for rating in ratings:
-            if not ratings.size == 0:  # User has reted something
-                rated_items = rated_items.append(items[items.id == rating], ignore_index=True)
-        if not rated_items.empty:  # User has some ratngs
-            rated_items_tags = get_tags_ordered(rated_items)
-            print("USER: {}".format(user))
-            print("\trated items: {}".format(rated_items.id.values.tolist()))
-            print("\ttags: {}".format(rated_items_tags))
-            recommended_ids = recommend(rated_items, rated_items_tags)
-            print("\trecommandations: {}".format(recommended_ids))
-            i = 0
-            while len(recommended_ids) < 5:
-                recommended_ids.append(top_pop[i])
-                i += 1
-        else:  # User has no ratings
-            print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            user_row = users[users.user_id == user]
-            u_jobroles = get_jobroles(user_row)
-            recommended_ids = recommend_no_ratings(u_jobroles)
-            print("\tjobroles: {}".format(u_jobroles))
-            print("\trecommandations: {}".format(recommended_ids))
-            i = 0
-            while len(recommended_ids) < 5:
-                recommended_ids.append(top_pop[i])
-                i += 1
-        f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
-        print("User {} computed in {}".format(user, dt.now() - tic))
-print("Process ended after {}".format(dt.now()-total_tic))
+# total_tic = dt.now()
+# top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
+# with open("test.csv", "w") as f:
+#     f.write("user_id,recommended_items\n")
+#     for user in user_ids:
+#         tic = dt.now()
+#         ratings = getuserratings(user)
+#         rated_items = pd.DataFrame(columns=items.columns).astype(np.int32)
+#         for rating in ratings:
+#             if not ratings.size == 0:  # User has reted something
+#                 rated_items = rated_items.append(items[items.id == rating], ignore_index=True)
+#         if not rated_items.empty:  # User has some ratngs
+#             rated_items_tags = get_tags_ordered(rated_items)
+#             print("USER: {}".format(user))
+#             print("\trated items: {}".format(rated_items.id.values.tolist()))
+#             print("\ttags: {}".format(rated_items_tags))
+#             recommended_ids = recommend(rated_items, rated_items_tags)
+#             print("\trecommandations: {}".format(recommended_ids))
+#             i = 0
+#             while len(recommended_ids) < 5:
+#                 recommended_ids.append(top_pop[i])
+#                 i += 1
+#         else:  # User has no ratings
+#             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
+#             user_row = users[users.user_id == user]
+#             u_jobroles = get_jobroles(user_row)
+#             recommended_ids = recommend_no_ratings(u_jobroles)
+#             print("\tjobroles: {}".format(u_jobroles))
+#             print("\trecommandations: {}".format(recommended_ids))
+#             i = 0
+#             while len(recommended_ids) < 5:
+#                 recommended_ids.append(top_pop[i])
+#                 i += 1
+#         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
+#         print("User {} computed in {}".format(user, dt.now() - tic))
+# print("Process ended after {}".format(dt.now()-total_tic))
