@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
 from datetime import datetime as dt
 import operator
 from userprofile import createdictionary, getuserratings
-
 
 # Loading Data
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
@@ -16,63 +14,70 @@ users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
 user_ids = samples.user_id.values
 items.fillna(value="0", inplace=True)
 available_items = items[items.active_during_test == 1].drop(["active_during_test", "created_at"], axis=1)
+
+
 # End of prepocessing data
 
-def get_tags_intersection(row, tags):
-    if list(set(tags) & set(row.split(','))):
-        count = len(list(set(tags) & set(row.split(','))))
+
+def get_tags_intersection(row, in_tags):
+    if list(set(in_tags) & set(row.split(','))):
+        count = len(list(set(in_tags) & set(row.split(','))))
         return count
     else:
         return 0
 
+
 def get_jobroles(row):
     return row.jobroles.values.tolist()
 
-def recommend_no_ratings(jobroles,available_items):
+
+def recommend_no_ratings(jobroles, rnr_available_items):
     # Dict containing {item_index: count}
-    title_dict = available_items['tags'].apply((lambda x: get_tags_intersection(x, jobroles))).to_dict()
+    title_dict = rnr_available_items['tags'].apply((lambda x: get_tags_intersection(x, jobroles))).to_dict()
     # Sort by count
-    sorted_id = sorted(title_dict.items(), key=operator.itemgetter(1), reverse=True)
+    rnr_sorted_id = sorted(title_dict.items(), key=operator.itemgetter(1), reverse=True)
     # Save the first 5 elements
     recommendations = []
-    for elem in sorted_id[:5]:
-        recommendations.append(getitemsid(elem[0], available_items))
+    for rnr_elem in rnr_sorted_id[:5]:
+        recommendations.append(getitemsid(rnr_elem[0], rnr_available_items))
     return recommendations
 
-def compute_comparison( value, dict) :
-    if value in dict :
-        return dict[value]
-    else :
+
+def compute_comparison(value, dictionary):
+    if value in dictionary:
+        return dictionary[value]
+    else:
         return 0
 
-def compute_comparison_string(value,dict):
-    if(isinstance(value,str)) :
-        splitted_string=value.split(",")
-        sum=0
-        for string in splitted_string :
-            sum +=compute_comparison(string,dict)
-        return sum
-    else :
+
+def compute_comparison_string(value, dictionary):
+    if isinstance(value, str):
+        splitted_string = value.split(",")
+        summation = 0
+        for string in splitted_string:
+            summation += compute_comparison(string, dictionary)
+        return summation
+    else:
         return 0
 
 
 def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
-    items_ids=itemdf["id"]
-    itemdf=itemdf.drop("id",axis=1)
-    columns_names=itemdf.columns
-    for colunm in columns_names :
-        if(colunm == "tags") :
-            itemdf[colunm]=itemdf[colunm].map(lambda x: compute_comparison_string(x,tagsdict))
-        elif(colunm == "title") :
+    items_ids = itemdf["id"]
+    itemdf = itemdf.drop("id", axis=1)
+    columns_names = itemdf.columns
+    for colunm in columns_names:
+        if colunm == "tags":
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict))
+        elif colunm == "title":
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict))
-        else :
-            element_dict= attribdict[colunm]
-            itemdf[colunm]=itemdf[colunm].map(lambda x: compute_comparison(x,element_dict),na_action=None)
-    sum_series=itemdf.sum(axis=1)
-    dictionary=dict(zip(items_ids.values,sum_series.values))
-    for item in alreadyClickedItems :
-        if item in dictionary :
-            dictionary[item]=0
+        else:
+            element_dict = attribdict[colunm]
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict), na_action=None)
+    sum_series = itemdf.sum(axis=1)
+    dictionary = dict(zip(items_ids.values, sum_series.values))
+    for item in alreadyclickeditems:
+        if item in dictionary:
+            dictionary[item] = 0
     return dictionary
 
 
@@ -88,9 +93,11 @@ with open("test.csv", "w") as f:
     for user in user_ids:
         tic = dt.now()
         titles, tags, attrib = createdictionary(user, interactions, items)
-        alreadyClickedItems=getuserratings(user,interactions)
+        alreadyClickedItems = getuserratings(user, interactions)
         if len(attrib) > 0:
-            items_score = computescore(available_items, titles, tags, attrib,alreadyClickedItems)  # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
+            # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
+            items_score = computescore(available_items, titles, tags, attrib,
+                                       alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             # Save the first 5 elements
@@ -101,7 +108,7 @@ with open("test.csv", "w") as f:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
             u_jobroles = get_jobroles(user_row)
-            recommended_ids = recommend_no_ratings(u_jobroles,available_items)
+            recommended_ids = recommend_no_ratings(u_jobroles, available_items)
             print("\tjobroles: {}".format(u_jobroles))
             print("\trecommandations: {}".format(recommended_ids))
             i = 0
@@ -111,4 +118,4 @@ with open("test.csv", "w") as f:
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now() - tic))
 
-print("Process ended after {}".format(dt.now()-total_tic))
+print("Process ended after {}".format(dt.now() - total_tic))
