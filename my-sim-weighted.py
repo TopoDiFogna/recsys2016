@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime as dt
 import operator
-from userprofile import createdictionary
+from userprofile import createdictionary, getuserratings
 
 
 # Loading Data
@@ -48,15 +48,15 @@ def compute_comparison( value, dict) :
 def compute_comparison_string(value,dict):
     if(isinstance(value,str)) :
         splitted_string=value.split(",")
-        val=0
+        sum=0
         for string in splitted_string :
-            val +=compute_comparison(string,dict)
-        return val
+            sum +=compute_comparison(string,dict)
+        return sum
     else :
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, attribdict):
+def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
     items_ids=itemdf["id"]
     itemdf=itemdf.drop("id",axis=1)
     columns_names=itemdf.columns
@@ -70,6 +70,9 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict):
             itemdf[colunm]=itemdf[colunm].map(lambda x: compute_comparison(x,element_dict),na_action=None)
     sum_series=itemdf.sum(axis=1)
     dictionary=dict(zip(items_ids.values,sum_series.values))
+    for item in alreadyClickedItems :
+        if item in dictionary :
+            dictionary[item]=0
     return dictionary
 
 
@@ -85,8 +88,9 @@ with open("test.csv", "w") as f:
     for user in user_ids:
         tic = dt.now()
         titles, tags, attrib = createdictionary(user, interactions, items)
+        alreadyClickedItems=getuserratings(user,interactions)
         if len(attrib) > 0:
-            items_score = computescore(available_items, titles, tags, attrib)  # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
+            items_score = computescore(available_items, titles, tags, attrib,alreadyClickedItems)  # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             # Save the first 5 elements
