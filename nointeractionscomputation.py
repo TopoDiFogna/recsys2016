@@ -3,7 +3,7 @@ import operator
 def getinteractionusers (usersdf, interactionsdf) :
     interactionsusers=interactionsdf["user_id"].unique()
     usersdf= usersdf[usersdf["user_id"].isin(interactionsusers)]
-    return  usersdf
+    return usersdf
 
 def compute_comparison(value, dictionary):
     if value in dictionary:
@@ -83,11 +83,9 @@ def create_dictionary_user(userwow) :
 def compute_recommendations(ids_dict,interactionsdf, items_filtered) :
     selectiondict={}
     items_filtered_ids=items_filtered["id"].values
-    print(items_filtered_ids)
     for id in ids_dict :
         selectedinteractions = interactionsdf[interactionsdf["user_id"] == id]
         selectedinteractions = selectedinteractions[interactionsdf["item_id"].isin(items_filtered_ids)].values
-        print(selectedinteractions)
         for entry in selectedinteractions :
             if entry[1] in selectiondict :
                 selectiondict[entry[1]] += entry[2] * ids_dict[id]
@@ -97,8 +95,6 @@ def compute_recommendations(ids_dict,interactionsdf, items_filtered) :
     recommended_ids=[]
     for elem in sorted_id[:5]:
         recommended_ids.append(elem[0])
-    print(selectiondict)
-    print(recommended_ids)
     return recommended_ids
 
 # # Loading Data

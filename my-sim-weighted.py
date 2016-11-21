@@ -90,13 +90,14 @@ def getitemsid(item_indexes, dataset):
 # Main code of the script
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
-usersdf= getinteractionusers(users,interactions)
+interaction_user_df= getinteractionusers(users,interactions)
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
         tic = dt.now()
         titles, tags, attrib = createdictionary(user, interactions, items)
         alreadyClickedItems = getuserratings(user, interactions)
+        recommended_ids = []
         if len(attrib) > 0:
             # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
             items_score = computescore(available_items, titles, tags, attrib,
@@ -104,7 +105,6 @@ with open("test.csv", "w") as f:
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             # Save the first 5 elements
-            recommended_ids = []
             for elem in sorted_id[:5]:
                 recommended_ids.append(elem[0])
         else:
@@ -119,12 +119,12 @@ with open("test.csv", "w") as f:
             #     recommended_ids.append(top_pop[i])
             #     i += 1
             attrdict, jobdict, edudict = create_dictionary_user(user_row)
-            returndict = computenoratingssimilarity(usersdf, jobdict, attrdict, edudict)
+            returndict = computenoratingssimilarity(interaction_user_df, jobdict, attrdict, edudict)
             sorted_id = sorted(returndict.items(), key=operator.itemgetter(1), reverse=True)
             simil_users = {}
             for elem in sorted_id[:10]:
                 simil_users[elem[0]] = elem[1]
-            recommended_ids=compute_recommendations(recommended_ids, interactions, available_items)
+            recommended_ids=compute_recommendations(simil_users, interactions, available_items)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now() - tic))
 
