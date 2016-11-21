@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime as dt
 import operator
 from userprofile import createdictionary, getuserratings
+from nointeractionscomputation import *
 
 # Loading Data
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
@@ -13,6 +14,7 @@ users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
 # Prepocessing data
 user_ids = samples.user_id.values
 items.fillna(value="0", inplace=True)
+users.fillna(value="0", inplace=True)
 available_items = items[items.active_during_test == 1].drop(["active_during_test", "created_at"], axis=1)
 
 
@@ -88,6 +90,7 @@ def getitemsid(item_indexes, dataset):
 # Main code of the script
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
+usersdf= getinteractionusers(users,interactions)
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
@@ -107,14 +110,21 @@ with open("test.csv", "w") as f:
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
-            u_jobroles = get_jobroles(user_row)
-            recommended_ids = recommend_no_ratings(u_jobroles, available_items)
-            print("\tjobroles: {}".format(u_jobroles))
-            print("\trecommandations: {}".format(recommended_ids))
-            i = 0
-            while len(recommended_ids) < 5:
-                recommended_ids.append(top_pop[i])
-                i += 1
+            # u_jobroles = get_jobroles(user_row)
+            # recommended_ids = recommend_no_ratings(u_jobroles, available_items)
+            # print("\tjobroles: {}".format(u_jobroles))
+            # print("\trecommandations: {}".format(recommended_ids))
+            # i = 0
+            # while len(recommended_ids) < 5:
+            #     recommended_ids.append(top_pop[i])
+            #     i += 1
+            attrdict, jobdict, edudict = create_dictionary_user(user_row)
+            returndict = computenoratingssimilarity(usersdf, jobdict, attrdict, edudict)
+            sorted_id = sorted(returndict.items(), key=operator.itemgetter(1), reverse=True)
+            simil_users = {}
+            for elem in sorted_id[:10]:
+                simil_users[elem[0]] = elem[1]
+            recommended_ids=compute_recommendations(recommended_ids, interactions, available_items)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now() - tic))
 
