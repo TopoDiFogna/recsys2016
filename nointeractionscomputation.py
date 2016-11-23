@@ -81,21 +81,22 @@ def create_dictionary_user(userwow) :
     return attrdict,jobrolesdict,edudict
 
 def compute_recommendations(ids_dict,interactionsdf, items_filtered) :
-    selectiondict={}
     items_filtered_ids=items_filtered["id"].values
+    recommended_ids = []
     for id in ids_dict :
-        selectedinteractions = interactionsdf[interactionsdf["user_id"] == id]
-        selectedinteractions = selectedinteractions[interactionsdf["item_id"].isin(items_filtered_ids)].values
-        for entry in selectedinteractions :
-            if entry[1] in selectiondict :
-                selectiondict[entry[1]] += entry[2] * ids_dict[id]
-            else :
-                selectiondict[entry[1]] = entry[2] * ids_dict[id]
-    sorted_id = sorted(selectiondict.items(), key=operator.itemgetter(1), reverse=True)
-    recommended_ids=[]
-    for elem in sorted_id[:5]:
-        recommended_ids.append(elem[0])
-    return recommended_ids
+        if( len(recommended_ids)< 5):
+            selectedinteractions = interactionsdf[interactionsdf["user_id"] == id]
+            selectedinteractions = selectedinteractions[interactionsdf["item_id"].isin(items_filtered_ids)].sort_values("interaction_type",ascending=False)
+            selectedinteractions = selectedinteractions["item_id"].unique()
+            for entry in selectedinteractions :
+                recommended_ids.append(entry)
+        else :
+            break
+    # sorted_id = sorted(selectiondict.items(), key=operator.itemgetter(1), reverse=True)
+    # recommended_ids=[]
+    # for elem in sorted_id[:5]:
+    #     recommended_ids.append(elem[0])
+    return recommended_ids[:5]
 
 # # Loading Data
 # samples = pd.read_csv("data/sample_submission.csv", header=0)

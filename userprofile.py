@@ -15,8 +15,7 @@
 def getuserratings(userid, interactionsdf):
     sampleinteractions = interactionsdf[interactionsdf['user_id'] == userid].reset_index().drop("index", 1).drop(
         "created_at", 1).drop("user_id", 1)
-    sampleinteractions = sampleinteractions.groupby(by='item_id', as_index=False).apply(
-        lambda x: x.ix[x.interaction_type.idxmax()])
+    #sampleinteractions = sampleinteractions.groupby(by='item_id', as_index=False).apply(lambda x: x.ix[x.interaction_type.idxmax()])
     if sampleinteractions.empty:
         return {}
     else:
