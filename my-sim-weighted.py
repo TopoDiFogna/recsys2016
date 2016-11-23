@@ -1,9 +1,6 @@
 import pandas as pd
-import numpy as np
 from datetime import datetime as dt
 import operator
-
-from pandas.lib import item_from_zerodim
 
 from userprofile import createdictionary, getuserratings
 from nointeractionscomputation import *
@@ -19,9 +16,8 @@ users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
 user_ids = samples.user_id.values
 items.fillna(value="0", inplace=True)
 users.fillna(value="0", inplace=True)
-available_items = items[items.active_during_test == 1].drop(["active_during_test", "created_at", "latitude", "longitude"], axis=1)
-
-
+available_items = items[items.active_during_test == 1].drop(
+    ["active_during_test", "created_at", "latitude", "longitude"], axis=1)
 # End of prepocessing data
 
 
@@ -49,25 +45,25 @@ def recommend_no_ratings(jobroles, rnr_available_items):
     return recommendations
 
 
-def compute_comparison(value, dictionary,base):
+def compute_comparison(value, dictionary, base):
     if value in dictionary:
-        if base == 0 :
+        if base == 0:
             return dictionary[value]
-        else :
-            if dictionary[value] == 0 :
+        else:
+            if dictionary[value] == 0:
                 return 0
             else:
-                return  base ** dictionary[value]
+                return base ** dictionary[value]
     else:
         return 0
 
 
-def compute_comparison_string(value, dictionary,base):
+def compute_comparison_string(value, dictionary, base):
     if isinstance(value, str):
         splitted_string = value.split(",")
         summation = 0
         for string in splitted_string:
-            summation += compute_comparison(string, dictionary,base)
+            summation += compute_comparison(string, dictionary, base)
         return summation
     else:
         return 0
@@ -79,12 +75,12 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
     columns_names = itemdf.columns
     for colunm in columns_names:
         if colunm == "tags":
-            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict,0))
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict, 0))
         elif colunm == "title":
-            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict,0))
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict, 0))
         else:
             element_dict = attribdict[colunm]
-            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict, 0), na_action=None)
     sum_series = itemdf.sum(axis=1)
     dictionary = dict(zip(items_ids.values, sum_series.values))
     for item in alreadyclickeditems:
@@ -96,35 +92,39 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
 def getitemsid(item_indexes, dataset):
     return dataset.loc[item_indexes].id
 
-def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
-    orderedratings=[]
-    while len(orderedratings) <5 :
+
+def order_ratings(sorteddict, tagsdict, titlesdict, attribdict):
+    orderedratings = []
+    while len(orderedratings) < 5:
         maxvalue = sorteddict[0][1]
-        equalids=[]
-        for elem in sorteddict :
-            if elem[1] == maxvalue :
+        equalids = []
+        for elem in sorteddict:
+            if elem[1] == maxvalue:
                 equalids.append(elem[0])
-            if elem[1] < maxvalue :
+            if elem[1] < maxvalue:
                 break
-        sorteddict=sorteddict[len(equalids):]
-        if(len(equalids)>1) :
-            item_selected=available_items[available_items.id.isin(equalids)]
-            ids=item_selected["id"]
-            item_selected=item_selected.drop("id", axis=1)
-            base=10
+        sorteddict = sorteddict[len(equalids):]
+        if len(equalids) > 1:
+            item_selected = available_items[available_items.id.isin(equalids)]
+            ids = item_selected["id"]
+            item_selected = item_selected.drop("id", axis=1)
+            base = 10
             for colunm in item_selected.columns:
                 if colunm == "tags":
-                    item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison_string(x, tagsdict, base))
+                    item_selected[colunm] = item_selected[colunm].map(
+                        lambda x: compute_comparison_string(x, tagsdict, base))
                 elif colunm == "title":
-                    item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison_string(x, titlesdict, base))
+                    item_selected[colunm] = item_selected[colunm].map(
+                        lambda x: compute_comparison_string(x, titlesdict, base))
                 else:
                     element_dict = attribdict[colunm]
-                    item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
-            sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
-            sum_indexes=sum_series.index
-            for index in sum_indexes :
+                    item_selected[colunm] = item_selected[colunm].map(
+                        lambda x: compute_comparison(x, element_dict, base), na_action=None)
+            sum_series = item_selected.sum(axis=1).sort_values(ascending=False)
+            sum_indexes = sum_series.index
+            for index in sum_indexes:
                 orderedratings.append(ids[index])
-        else :
+        else:
             orderedratings.append(equalids[0])
     return orderedratings[:5]
 
@@ -132,7 +132,7 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
 # Main code of the script
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
-interaction_user_df= getinteractionusers(users,interactions)
+interaction_user_df = getinteractionusers(users, interactions)
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
@@ -146,10 +146,7 @@ with open("test.csv", "w") as f:
                                        alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids=orderRatings(sorted_id,tags,titles,attrib,available_items)
-            # Save the first 5 elements
-            # for elem in sorted_id[:5]:
-            #     recommended_ids.append(elem[0])
+            recommended_ids = order_ratings(sorted_id, tags, titles, attrib)
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
@@ -161,13 +158,6 @@ with open("test.csv", "w") as f:
             while len(recommended_ids) < 5:
                 recommended_ids.append(top_pop[i])
                 i += 1
-            # attrdict, jobdict, edudict = create_dictionary_user(user_row)
-            # returndict = computenoratingssimilarity(interaction_user_df, jobdict, attrdict, edudict)
-            # sorted_id = sorted(returndict.items(), key=operator.itemgetter(1), reverse=True)
-            # simil_users = []
-            # for elem in sorted_id[:10]:
-            #     simil_users.append(elem[0])
-            # recommended_ids=compute_recommendations(simil_users, interactions, available_items)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now() - tic))
 
