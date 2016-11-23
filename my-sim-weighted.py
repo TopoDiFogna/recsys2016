@@ -84,8 +84,9 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict,0))
         else:
             element_dict = attribdict[colunm]
-            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
-    sum_series = itemdf.sum(axis=1)
+            #itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
+    #sum_series = itemdf.sum(axis=1)
+    sum_series = itemdf["tags"] + itemdf["title"]
     dictionary = dict(zip(items_ids.values, sum_series.values))
     for item in alreadyclickeditems:
         if item in dictionary:
@@ -119,8 +120,10 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
                     item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison_string(x, titlesdict, base))
                 else:
                     element_dict = attribdict[colunm]
-                    item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
-            sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
+                    #item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
+            #sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
+            sum_series = item_selected["tags"] + item_selected["title"]
+            sum_series = sum_series.sort_values(ascending=False)
             sum_indexes=sum_series.index
             for index in sum_indexes :
                 orderedratings.append(ids[index])
@@ -150,6 +153,7 @@ with open("test.csv", "w") as f:
             # Save the first 5 elements
             # for elem in sorted_id[:5]:
             #     recommended_ids.append(elem[0])
+            print(recommended_ids)
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
