@@ -1,4 +1,3 @@
-import pandas as pd
 
 #questa funzione prende in ingresso la porzione di interactions dell'utente e ritorna come output un dizionario con i pesi specifici
 #per ogni item. Se gli viene passato come secondo parametro False allora utilizza nel calcolo dei pesi anche gli items con rating 2 e 3
@@ -61,8 +60,3 @@ def createdictionary(itemdict, itemsdf):
                     else:
                         tagsdict[tag] += itemdict[rated_item]
     return titledict, tagsdict, attributesdict
-
-
-interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
-interactionssample=interactions[interactions["user_id"] == 285]
-getuseritemweights(interactionssample,False)
