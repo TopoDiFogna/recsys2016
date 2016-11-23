@@ -85,6 +85,7 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
         else:
             element_dict = attribdict[colunm]
             #itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
+            #questa riga computa i ratings anche per gli altri valori, l'ho commentata per fare speed_up
     #sum_series = itemdf.sum(axis=1)
     sum_series = itemdf["tags"] + itemdf["title"]
     dictionary = dict(zip(items_ids.values, sum_series.values))
@@ -97,6 +98,7 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
 def getitemsid(item_indexes, dataset):
     return dataset.loc[item_indexes].id
 
+#questo metodo server per riordinare le recommendations con lo stesso ordine
 def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
     orderedratings=[]
     while len(orderedratings) <5 :
@@ -109,10 +111,27 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
                 break
         sorteddict=sorteddict[len(equalids):]
         if(len(equalids)>1) :
+
+            max_tag_value=max(tagsdict.values())
+            max_title_value=max(titlesdict.values())
+            max_attr_value=0
+            for elem in attribdict :
+                max_temp=max(attribdict[elem].values())
+                if(max_temp>max_attr_value) :
+                    max_attr_value = max_temp
+
             item_selected=available_items[available_items.id.isin(equalids)]
             ids=item_selected["id"]
             item_selected=item_selected.drop("id", axis=1)
-            base=10
+
+            # potresti avere dei problemi con questa base perchè uso una valutazione di tipo esponenziale
+            #ho aggiunto questo controllo per evitare l'overflow di float
+            if(max_attr_value >= 308 or max_title_value >=308 or max_tag_value >=308) :
+                base = 5
+            else :
+                base =10
+
+
             for colunm in item_selected.columns:
                 if colunm == "tags":
                     item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison_string(x, tagsdict, base))
@@ -121,6 +140,7 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
                 else:
                     element_dict = attribdict[colunm]
                     #item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
+                    #questa l'ho tolta per speed_up come nell'altro metodo
             #sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
             sum_series = item_selected["tags"] + item_selected["title"]
             sum_series = sum_series.sort_values(ascending=False)
