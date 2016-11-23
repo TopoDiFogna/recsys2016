@@ -1,8 +1,11 @@
 
+#IL FUNZIONAMENTO è : PRIMA CHIAMO getuseritemweights E POI PASSO IL RISULTATO ALLA NUOVA createdictionary
+
+
+
 #questa funzione prende in ingresso la porzione di interactions dell'utente e ritorna come output un dizionario con i pesi specifici
 #per ogni item. Se gli viene passato come secondo parametro False allora utilizza nel calcolo dei pesi anche gli items con rating 2 e 3
 # se invece gli viene passato True allora usa solo i click
-
 def getuseritemweights (userrating, onlyClick) :
     clickrating = userrating[userrating["interaction_type"] == 1]
     counts = clickrating.groupby('item_id').size()
