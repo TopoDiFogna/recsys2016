@@ -18,6 +18,8 @@ items.fillna(value="0", inplace=True)
 users.fillna(value="0", inplace=True)
 available_items = items[items.active_during_test == 1].drop(
     ["active_during_test", "created_at", "latitude", "longitude"], axis=1)
+
+
 # End of prepocessing data
 
 
@@ -69,7 +71,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
+def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -78,11 +80,7 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict, 0))
         elif colunm == "title":
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict, 0))
-        else:
-            element_dict = attribdict[colunm]
-            #itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
-            #questa riga computa i ratings anche per gli altri valori, l'ho commentata per fare speed_up
-    #sum_series = itemdf.sum(axis=1)
+
     sum_series = itemdf["tags"] + itemdf["title"]
     dictionary = dict(zip(items_ids.values, sum_series.values))
     for item in alreadyclickeditems:
@@ -94,10 +92,11 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
 def getitemsid(item_indexes, dataset):
     return dataset.loc[item_indexes].id
 
-#questo metodo server per riordinare le recommendations con lo stesso ordine
-def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
-    orderedratings=[]
-    while len(orderedratings) <5 :
+
+# questo metodo server per riordinare le recommendations con lo stesso ordine
+def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
+    orderedratings = []
+    while len(orderedratings) < 5:
         maxvalue = sorteddict[0][1]
         equalids = []
         for elem in sorteddict:
@@ -105,28 +104,27 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
                 equalids.append(elem[0])
             if elem[1] < maxvalue:
                 break
-        sorteddict=sorteddict[len(equalids):]
-        if(len(equalids)>1) :
+        sorteddict = sorteddict[len(equalids):]
+        if len(equalids) > 1:
 
-            max_tag_value=max(tagsdict.values())
-            max_title_value=max(titlesdict.values())
-            max_attr_value=0
-            for elem in attribdict :
-                max_temp=max(attribdict[elem].values())
-                if(max_temp>max_attr_value) :
+            max_tag_value = max(tagsdict.values())
+            max_title_value = max(titlesdict.values())
+            max_attr_value = 0
+            for elem in attribdict:
+                max_temp = max(attribdict[elem].values())
+                if max_temp > max_attr_value:
                     max_attr_value = max_temp
 
-            item_selected=available_items[available_items.id.isin(equalids)]
-            ids=item_selected["id"]
-            item_selected=item_selected.drop("id", axis=1)
+            item_selected = availableitems[availableitems.id.isin(equalids)]
+            ids = item_selected["id"]
+            item_selected = item_selected.drop("id", axis=1)
 
             # potresti avere dei problemi con questa base perchè uso una valutazione di tipo esponenziale
-            #ho aggiunto questo controllo per evitare l'overflow di float
-            if(max_attr_value >= 308 or max_title_value >=308 or max_tag_value >=308) :
+            # ho aggiunto questo controllo per evitare l'overflow di float
+            if max_attr_value >= 308 or max_title_value >= 308 or max_tag_value >= 308:
                 base = 5
-            else :
-                base =10
-
+            else:
+                base = 10
 
             for colunm in item_selected.columns:
                 if colunm == "tags":
@@ -135,15 +133,11 @@ def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
                 elif colunm == "title":
                     item_selected[colunm] = item_selected[colunm].map(
                         lambda x: compute_comparison_string(x, titlesdict, base))
-                else:
-                    element_dict = attribdict[colunm]
-                    #item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
-                    #questa l'ho tolta per speed_up come nell'altro metodo
-            #sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
+
             sum_series = item_selected["tags"] + item_selected["title"]
             sum_series = sum_series.sort_values(ascending=False)
-            sum_indexes=sum_series.index
-            for index in sum_indexes :
+            sum_indexes = sum_series.index
+            for index in sum_indexes:
                 orderedratings.append(ids[index])
         else:
             orderedratings.append(equalids[0])
@@ -162,15 +156,11 @@ with open("test.csv", "w") as f:
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
         if len(attrib) > 0:
-            # se questo è un dizionario in fprma {itemid: score} basta de-commentare le righe sotto ed è fatta
-            items_score = computescore(available_items, titles, tags, attrib,
+            items_score = computescore(available_items, titles, tags,
                                        alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids=orderRatings(sorted_id,tags,titles,attrib,available_items)
-            # Save the first 5 elements
-            # for elem in sorted_id[:5]:
-            #     recommended_ids.append(elem[0])
+            recommended_ids = order_ratings(sorted_id, tags, titles, attrib, available_items)
             print(recommended_ids)
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
