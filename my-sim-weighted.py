@@ -80,8 +80,10 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict, 0))
         else:
             element_dict = attribdict[colunm]
-            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict, 0), na_action=None)
-    sum_series = itemdf.sum(axis=1)
+            #itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict,0), na_action=None)
+            #questa riga computa i ratings anche per gli altri valori, l'ho commentata per fare speed_up
+    #sum_series = itemdf.sum(axis=1)
+    sum_series = itemdf["tags"] + itemdf["title"]
     dictionary = dict(zip(items_ids.values, sum_series.values))
     for item in alreadyclickeditems:
         if item in dictionary:
@@ -92,10 +94,10 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
 def getitemsid(item_indexes, dataset):
     return dataset.loc[item_indexes].id
 
-
-def order_ratings(sorteddict, tagsdict, titlesdict, attribdict):
-    orderedratings = []
-    while len(orderedratings) < 5:
+#questo metodo server per riordinare le recommendations con lo stesso ordine
+def orderRatings (sorteddict, tagsdict,titlesdict,attribdict, availableitems):
+    orderedratings=[]
+    while len(orderedratings) <5 :
         maxvalue = sorteddict[0][1]
         equalids = []
         for elem in sorteddict:
@@ -103,12 +105,29 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict):
                 equalids.append(elem[0])
             if elem[1] < maxvalue:
                 break
-        sorteddict = sorteddict[len(equalids):]
-        if len(equalids) > 1:
-            item_selected = available_items[available_items.id.isin(equalids)]
-            ids = item_selected["id"]
-            item_selected = item_selected.drop("id", axis=1)
-            base = 10
+        sorteddict=sorteddict[len(equalids):]
+        if(len(equalids)>1) :
+
+            max_tag_value=max(tagsdict.values())
+            max_title_value=max(titlesdict.values())
+            max_attr_value=0
+            for elem in attribdict :
+                max_temp=max(attribdict[elem].values())
+                if(max_temp>max_attr_value) :
+                    max_attr_value = max_temp
+
+            item_selected=available_items[available_items.id.isin(equalids)]
+            ids=item_selected["id"]
+            item_selected=item_selected.drop("id", axis=1)
+
+            # potresti avere dei problemi con questa base perchè uso una valutazione di tipo esponenziale
+            #ho aggiunto questo controllo per evitare l'overflow di float
+            if(max_attr_value >= 308 or max_title_value >=308 or max_tag_value >=308) :
+                base = 5
+            else :
+                base =10
+
+
             for colunm in item_selected.columns:
                 if colunm == "tags":
                     item_selected[colunm] = item_selected[colunm].map(
@@ -118,11 +137,13 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict):
                         lambda x: compute_comparison_string(x, titlesdict, base))
                 else:
                     element_dict = attribdict[colunm]
-                    item_selected[colunm] = item_selected[colunm].map(
-                        lambda x: compute_comparison(x, element_dict, base), na_action=None)
-            sum_series = item_selected.sum(axis=1).sort_values(ascending=False)
-            sum_indexes = sum_series.index
-            for index in sum_indexes:
+                    #item_selected[colunm] = item_selected[colunm].map(lambda x: compute_comparison(x, element_dict, base), na_action=None)
+                    #questa l'ho tolta per speed_up come nell'altro metodo
+            #sum_series=item_selected.sum(axis=1).sort_values(ascending=False)
+            sum_series = item_selected["tags"] + item_selected["title"]
+            sum_series = sum_series.sort_values(ascending=False)
+            sum_indexes=sum_series.index
+            for index in sum_indexes :
                 orderedratings.append(ids[index])
         else:
             orderedratings.append(equalids[0])
@@ -146,7 +167,11 @@ with open("test.csv", "w") as f:
                                        alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings(sorted_id, tags, titles, attrib)
+            recommended_ids=orderRatings(sorted_id,tags,titles,attrib,available_items)
+            # Save the first 5 elements
+            # for elem in sorted_id[:5]:
+            #     recommended_ids.append(elem[0])
+            print(recommended_ids)
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
