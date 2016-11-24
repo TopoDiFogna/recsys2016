@@ -3,7 +3,6 @@ from datetime import datetime as dt
 from wightmanagement import getuseritemweights, createdictionary
 import operator
 
-
 # Loading Data
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
@@ -17,16 +16,6 @@ items.fillna(value="0", inplace=True)
 users.fillna(value="0", inplace=True)
 available_items = items[items.active_during_test == 1].drop(["active_during_test", "created_at"], axis=1)
 # End of prepocessing data
-
-# TODO
-# def get_tags_title_as_dict(item_profile):
-#     tags_title_dict = {}
-#     for key in item_profile.title.split(',') + item_profile.tags.split(','):
-#         if key not in tags_title_dict:
-#             tags_title_dict[key] = 1
-#         else:
-#             tags_title_dict[key] = 1
-#     return tags_title_dict
 
 
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
@@ -133,23 +122,52 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
 
 
 def get_jobroles(row):
-    return row.jobroles.values.tolist()
+    jobdict = {}
+    for jobrole in row.jobroles.values:
+        if jobrole not in jobdict:
+            jobdict[jobrole] = 1
+        else:
+            jobdict[jobrole] += 1
+    return jobdict
 
 
-def recommend_no_ratings(jobroles, rnr_available_items):
+def recommend_no_ratings(jobroles, attribdict, rnr_available_items):
+    items_ids = rnr_available_items["id"]
     # Dict containing {item_index: count}
-    title_dict = rnr_available_items['tags'].apply((lambda x: get_tags_intersection(x, jobroles))).to_dict()
+    rnr_available_items['tags'] = rnr_available_items['tags'].apply(lambda x: compute_comparison_string(x, jobroles, 0))
+    rnr_available_items['title'] = rnr_available_items['title'].apply(lambda x: compute_comparison_string(x, jobroles,
+                                                                                                          0))
+    for k in attribdict:
+        element_dict = attribdict[k]
+        rnr_available_items[k] = rnr_available_items[k].map(lambda x: compute_comparison(x, element_dict, 0),
+                                                            na_action=None)
+    sum_series = (rnr_available_items["tags"] + rnr_available_items["title"] + rnr_available_items["industry_id"] +
+                  rnr_available_items["discipline_id"] + rnr_available_items["country"])
+    dictionary = dict(zip(items_ids.values, sum_series.values))
     # Sort by count
-    rnr_sorted_id = sorted(title_dict.items(), key=operator.itemgetter(1), reverse=True)
+    rnr_sorted_id = sorted(dictionary.items(), key=operator.itemgetter(1), reverse=True)
     # Save the first 5 elements
     recommendations = []
     for rnr_elem in rnr_sorted_id[:5]:
-        recommendations.append(getitemsid(rnr_elem[0], rnr_available_items))
+        recommendations.append(rnr_elem[0])
     return recommendations
 
 
-def getitemsid(item_indexes, dataset):
-    return dataset.loc[item_indexes].id
+def get_tags_intersection(row, in_tags):
+    if list(set(in_tags) & set(row.split(','))):
+        count = len(list(set(in_tags) & set(row.split(','))))
+        return count
+    else:
+        return 0
+
+
+def getuserattributes(row):
+    discipline_id = row.discipline_id.values[0]
+    industry_id = row.industry_id.values[0]
+    country = row.country.values[0]
+    dictionary = {"discipline_id": {discipline_id: 1}, "industry_id": {industry_id: 1},
+                  "country": {country: 1}}
+    return dictionary
 
 
 # Main code of the script
@@ -161,9 +179,7 @@ with open("test.csv", "w") as f:
         tic = dt.now()
         user_ratings = getuserratings(user, interactions)
         user_ratings_weighted = getuseritemweights(user_ratings, False)
-        # print(user_ratings_weighted)
         titles, tags, attrib = createdictionary(user_ratings_weighted, items)
-        print("{}\n{}\n{}".format(titles, tags, attrib))
         recommended_ids = []
         if len(attrib) > 0:
             items_score = computescore(available_items, titles, tags, attrib, user_ratings.item_id.values)
@@ -171,18 +187,13 @@ with open("test.csv", "w") as f:
             recommended_ids = order_ratings(sorted_id, tags, titles, attrib, available_items)
             print("User: {}, Recommendations: {}".format(user, recommended_ids))
         else:
-            print("USER {} has no ratings, recommendations done based on jobroles".format(user))
+            print("USER {} has no ratings, recommendations done based on his profile".format(user))
             user_row = users[users.user_id == user]
             u_jobroles = get_jobroles(user_row)
-            recommended_ids = recommend_no_ratings(u_jobroles, available_items)
-            print("\tjobroles: {}".format(u_jobroles))
-            print("\trecommandations: {}".format(recommended_ids))
-            i = 0
-            while len(recommended_ids) < 5:
-                recommended_ids.append(top_pop[i])
-                i += 1
+            u_attrib = getuserattributes(user_row)
+            recommended_ids = recommend_no_ratings(u_jobroles, u_attrib, available_items)
+            print("User: {}, Recommendations: {}".format(user, recommended_ids))
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}".format(user, dt.now() - tic))
-        break
 
 print("Process ended after {}".format(dt.now() - total_tic))
