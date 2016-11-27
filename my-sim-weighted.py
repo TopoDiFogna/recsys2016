@@ -30,6 +30,12 @@ def get_tags_intersection(row, in_tags):
     else:
         return 0
 
+def get_comparison(value, comparison) :
+    if (value == comparison) :
+        return  1
+    else :
+        return 0
+
 
 def get_jobroles(row):
     return row.jobroles.values.tolist()
@@ -37,9 +43,13 @@ def get_jobroles(row):
 
 def recommend_no_ratings(jobroles, rnr_available_items):
     # Dict containing {item_index: count}
-    title_dict = rnr_available_items['tags'].apply((lambda x: get_tags_intersection(x, jobroles))).to_dict()
+    title_series = rnr_available_items['tags'].apply((lambda x: get_tags_intersection(x, jobroles)))
+    tag_series = rnr_available_items['title'].apply((lambda x: get_tags_intersection(x, jobroles)))
+
+    total_series = title_series + tag_series
+    final_dict = total_series.to_dict()
     # Sort by count
-    rnr_sorted_id = sorted(title_dict.items(), key=operator.itemgetter(1), reverse=True)
+    rnr_sorted_id = sorted(final_dict.items(), key=operator.itemgetter(1), reverse=True)
     # Save the first 5 elements
     recommendations = []
     for rnr_elem in rnr_sorted_id[:5]:
@@ -71,7 +81,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
+def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -80,6 +90,9 @@ def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict, 0))
         elif colunm == "title":
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict, 0))
+        else :
+            element_dict = attribdict[colunm]
+            itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict, 0), na_action=None)
 
     sum_series = itemdf["tags"] + itemdf["title"]
     dictionary = dict(zip(items_ids.values, sum_series.values))
@@ -128,11 +141,17 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
 
             for colunm in item_selected.columns:
                 if colunm == "tags":
-                    item_selected[colunm] = item_selected[colunm].map(
-                        lambda x: compute_comparison_string(x, tagsdict, base))
+                    try:
+                        item_selected[colunm] = item_selected[colunm].map(
+                            lambda x: compute_comparison_string(x, tagsdict, base))
+                    except :
+                        item_selected[colunm] = 1.7976931348623157e+308
                 elif colunm == "title":
-                    item_selected[colunm] = item_selected[colunm].map(
-                        lambda x: compute_comparison_string(x, titlesdict, base))
+                    try:
+                        item_selected[colunm] = item_selected[colunm].map(
+                            lambda x: compute_comparison_string(x, titlesdict, base))
+                    except :
+                        item_selected[colunm] = 1.7976931348623157e+308
 
             sum_series = item_selected["tags"] + item_selected["title"]
             sum_series = sum_series.sort_values(ascending=False)
@@ -154,10 +173,12 @@ with open("test.csv", "w") as f:
         tic = dt.now()
         titles, tags, attrib = createdictionary(user, interactions, items)
         alreadyClickedItems = getuserratings(user, interactions)
+        print( attrib)
+        print(titles)
+        print(tags)
         recommended_ids = []
         if len(attrib) > 0:
-            items_score = computescore(available_items, titles, tags,
-                                       alreadyClickedItems)
+            items_score = computescore(available_items, titles, tags, attrib, alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags, titles, attrib, available_items)
@@ -166,7 +187,12 @@ with open("test.csv", "w") as f:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
             u_jobroles = get_jobroles(user_row)
-            recommended_ids = recommend_no_ratings(u_jobroles, available_items)
+            available_items_filtered=available_items
+            if not(user_row["industry_id"].values[0] == 0):
+                available_items_filtered= available_items_filtered[available_items_filtered["industry_id"] == user_row["industry_id"].values[0]]
+            elif not (user_row["discipline_id"].values[0] == 0):
+                available_items_filtered=available_items_filtered[available_items_filtered["discipline_id"] == user_row["discipline_id"].values[0]]
+            recommended_ids = recommend_no_ratings(u_jobroles, available_items_filtered)
             print("\tjobroles: {}".format(u_jobroles))
             print("\trecommandations: {}".format(recommended_ids))
             i = 0
