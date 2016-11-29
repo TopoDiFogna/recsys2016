@@ -4,12 +4,16 @@ import operator
 
 from userprofile import createdictionary, getuserratings
 from nointeractionscomputation import *
+from tfidf import *
 
 # Loading Data
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
 samples = pd.read_csv("data/sample_submission.csv", header=0)
 users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
+tagdf = pd.read_csv("tag_matrix.csv", header=0)
+titledf = pd.read_csv("title_matrix.csv", header=0)
+
 # End loading data
 
 # Prepocessing data
@@ -22,6 +26,14 @@ available_items = items[items.active_during_test == 1].drop(
 
 # End of prepocessing data
 
+def save_sparse_csc(filename,array):
+    np.savez(filename,data = array.data ,indices=array.indices,
+             indptr =array.indptr, shape=array.shape )
+
+def load_sparse_csc(filename):
+    loader = np.load(filename)
+    return csc_matrix(( loader['data'], loader['indices'], loader['indptr']),
+                         shape = loader['shape'])
 
 def get_tags_intersection(row, in_tags):
     if list(set(in_tags) & set(row.split(','))):
@@ -119,25 +131,12 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
                 break
         sorteddict = sorteddict[len(equalids):]
         if len(equalids) > 1:
-
-            max_tag_value = max(tagsdict.values())
-            max_title_value = max(titlesdict.values())
-            max_attr_value = 0
-            for elem in attribdict:
-                max_temp = max(attribdict[elem].values())
-                if max_temp > max_attr_value:
-                    max_attr_value = max_temp
-
             item_selected = availableitems[availableitems.id.isin(equalids)]
             ids = item_selected["id"]
             item_selected = item_selected.drop("id", axis=1)
-
             # potresti avere dei problemi con questa base perchè uso una valutazione di tipo esponenziale
             # ho aggiunto questo controllo per evitare l'overflow di float
-            if max_attr_value >= 308 or max_title_value >= 308 or max_tag_value >= 308:
-                base = 5
-            else:
-                base = 10
+            base = 10
 
             for colunm in item_selected.columns:
                 if colunm == "tags":
@@ -167,21 +166,31 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
 total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
 interaction_user_df = getinteractionusers(users, interactions)
+tags = pd.Series(index=tagdf.id, data=np.arange(tagdf.index.size))
+titles= pd.Series(index=titledf.id, data=np.arange(titledf.index.size))
+
+# title_matrix, tag_matrix = createcoomatrix(items,tags,titles)
+# tag_matrix = tag_matrix.tocsc()
+# title_matrix = title_matrix.tocsc()
+# print(tag_matrix.tocsr())
+# print(title_matrix.tocsr())
+# save_sparse_csc("titleMatrix",title_matrix)
+# save_sparse_csc("tagMatrix",tag_matrix)
+tag_matrix = load_sparse_csc("tagMatrix.npz")
+title_matrix = load_sparse_csc("titleMatrix.npz")
+
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
         tic = dt.now()
-        titles, tags, attrib = createdictionary(user, interactions, items)
+        titles_dict, tags_dict, attrib = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
         alreadyClickedItems = getuserratings(user, interactions)
-        print( attrib)
-        print(titles)
-        print(tags)
         recommended_ids = []
         if len(attrib) > 0:
-            items_score = computescore(available_items, titles, tags, attrib, alreadyClickedItems)
+            items_score = computescore(available_items, titles_dict, tags_dict, attrib, alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings(sorted_id, tags, titles, attrib, available_items)
+            recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, attrib, available_items)
             print(recommended_ids)
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
