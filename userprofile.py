@@ -1,16 +1,5 @@
-# TODO RICORDATI DI INSERIRE QUESTI NEL TUO SCRIPT
-# TODO RICORDATI DI INSERIRE QUESTI NEL TUO SCRIPT
-# TODO RICORDATI DI INSERIRE QUESTI NEL TUO SCRIPT
-# TODO RICORDATI DI INSERIRE QUESTI NEL TUO SCRIPT
-# interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
-# items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
-# items.fillna(value="0", inplace=True)
-
-# Per importare questo modulo e usare le funzioni qui dentro basta usare:
-# from userprifile import createdictionary
-# ti serve solo quella funzione, le altre sono di supporto
-
 from tfidf import *
+
 
 # Gets the ratings a user has performed dropping the duplicates and keeping the highest
 def getuserratings(userid, interactionsdf):
@@ -27,19 +16,21 @@ def getitemprofile(itemid, itemsdf):
     item_profile = itemsdf[itemsdf['id'] == itemid]
     return item_profile.drop(["id", "created_at", "active_during_test"], axis=1).squeeze()
 
-def getIndexformId(itemid, itemsdf) :
+
+def get_index_form_id(itemid, itemsdf):
     index = itemsdf[itemsdf["id"] == itemid].index.values[0]
     return index
 
+
 # Returns 3 different dictionaries for the interactions of the user, every attribute is weighted by number of ratings
-def createdictionary(userid, interactionsdf, itemsdf,titleMatrix, tagMatrix, tagdf, titledf):
+def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, tagdf, titledf):
     titledict = {}
     tagsdict = {}
     attributesdict = {}  # This is a nested dictionary!
     user_ratings = getuserratings(userid, interactionsdf)
     for rated_item in user_ratings:
         item_profile = getitemprofile(rated_item, itemsdf)
-        indexItem = getIndexformId(rated_item, itemsdf)
+        index_item = get_index_form_id(rated_item, itemsdf)
         for key in item_profile.index.values:
             if key != "title" and key != "tags":
                 if key not in attributesdict:
@@ -51,18 +42,18 @@ def createdictionary(userid, interactionsdf, itemsdf,titleMatrix, tagMatrix, tag
                         attributesdict[key][item_profile[key]] += 1
             elif key == "title":
                 titles = item_profile.title.split(',')
-                if(not (titles[0] == "0")):
+                if not (titles[0] == "0"):
                     for title in titles:
                         if title not in titledict:
-                            titledict[title] = tf_idfcomputing(titleMatrix,indexItem,titledf.loc[int(title)])
+                            titledict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
                         else:
-                            titledict[title] += tf_idfcomputing(titleMatrix,indexItem,titledf.loc[int(title)])
+                            titledict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
             elif key == "tags":
                 tags = item_profile.tags.split(',')
-                if (not (tags[0] == "0")):
+                if not (tags[0] == "0"):
                     for tag in tags:
                         if tag not in tagsdict:
-                            tagsdict[tag] = tf_idfcomputing(tagMatrix,indexItem,tagdf.loc[int(tag)])
+                            tagsdict[tag] = tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
                         else:
-                            tagsdict[tag] += tf_idfcomputing(tagMatrix,indexItem,tagdf.loc[int(tag)])
+                            tagsdict[tag] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
     return titledict, tagsdict, attributesdict

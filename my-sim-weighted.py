@@ -1,6 +1,6 @@
 import pandas as pd
-from datetime import datetime as dt
 import operator
+from scipy.sparse import csc_matrix
 
 from userprofile import createdictionary, getuserratings
 from nointeractionscomputation import *
@@ -26,14 +26,16 @@ available_items = items[items.active_during_test == 1].drop(
 
 # End of prepocessing data
 
-def save_sparse_csc(filename,array):
-    np.savez(filename,data = array.data ,indices=array.indices,
-             indptr =array.indptr, shape=array.shape )
+def save_sparse_csc(filename, array):
+    np.savez(filename, data=array.data, indices=array.indices,
+             indptr=array.indptr, shape=array.shape)
+
 
 def load_sparse_csc(filename):
     loader = np.load(filename)
-    return csc_matrix(( loader['data'], loader['indices'], loader['indptr']),
-                         shape = loader['shape'])
+    return csc_matrix((loader['data'], loader['indices'], loader['indptr']),
+                      shape=loader['shape'])
+
 
 def get_tags_intersection(row, in_tags):
     if list(set(in_tags) & set(row.split(','))):
@@ -42,10 +44,11 @@ def get_tags_intersection(row, in_tags):
     else:
         return 0
 
-def get_comparison(value, comparison) :
-    if (value == comparison) :
-        return  1
-    else :
+
+def get_comparison(value, comparison):
+    if (value == comparison):
+        return 1
+    else:
         return 0
 
 
@@ -102,7 +105,7 @@ def computescore(itemdf, titlesdict, tagsdict, attribdict, alreadyclickeditems):
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, tagsdict, 0))
         elif colunm == "title":
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison_string(x, titlesdict, 0))
-        else :
+        else:
             element_dict = attribdict[colunm]
             itemdf[colunm] = itemdf[colunm].map(lambda x: compute_comparison(x, element_dict, 0), na_action=None)
 
@@ -143,13 +146,13 @@ def order_ratings(sorteddict, tagsdict, titlesdict, attribdict, availableitems):
                     try:
                         item_selected[colunm] = item_selected[colunm].map(
                             lambda x: compute_comparison_string(x, tagsdict, base))
-                    except :
+                    except:
                         item_selected[colunm] = 1.7976931348623157e+308
                 elif colunm == "title":
                     try:
                         item_selected[colunm] = item_selected[colunm].map(
                             lambda x: compute_comparison_string(x, titlesdict, base))
-                    except :
+                    except:
                         item_selected[colunm] = 1.7976931348623157e+308
 
             sum_series = item_selected["tags"] + item_selected["title"]
@@ -167,7 +170,7 @@ total_tic = dt.now()
 top_pop = [1053452, 2778525, 1244196, 1386412, 657183]
 interaction_user_df = getinteractionusers(users, interactions)
 tags = pd.Series(index=tagdf.id, data=np.arange(tagdf.index.size))
-titles= pd.Series(index=titledf.id, data=np.arange(titledf.index.size))
+titles = pd.Series(index=titledf.id, data=np.arange(titledf.index.size))
 
 # title_matrix, tag_matrix = createcoomatrix(items,tags,titles)
 # tag_matrix = tag_matrix.tocsc()
@@ -183,7 +186,8 @@ with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
         tic = dt.now()
-        titles_dict, tags_dict, attrib = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
+        titles_dict, tags_dict, attrib = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags,
+                                                          titles)
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
         if len(attrib) > 0:
@@ -196,11 +200,13 @@ with open("test.csv", "w") as f:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
             user_row = users[users.user_id == user]
             u_jobroles = get_jobroles(user_row)
-            available_items_filtered=available_items
-            if not(user_row["industry_id"].values[0] == 0):
-                available_items_filtered= available_items_filtered[available_items_filtered["industry_id"] == user_row["industry_id"].values[0]]
+            available_items_filtered = available_items
+            if not (user_row["industry_id"].values[0] == 0):
+                available_items_filtered = available_items_filtered[
+                    available_items_filtered["industry_id"] == user_row["industry_id"].values[0]]
             elif not (user_row["discipline_id"].values[0] == 0):
-                available_items_filtered=available_items_filtered[available_items_filtered["discipline_id"] == user_row["discipline_id"].values[0]]
+                available_items_filtered = available_items_filtered[
+                    available_items_filtered["discipline_id"] == user_row["discipline_id"].values[0]]
             recommended_ids = recommend_no_ratings(u_jobroles, available_items_filtered)
             print("\tjobroles: {}".format(u_jobroles))
             print("\trecommandations: {}".format(recommended_ids))
