@@ -108,6 +108,48 @@ def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
     return orderedratings[:5]
 
 
+def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
+    orderedratings = []
+    while len(orderedratings) < 5:
+        maxvalue = sorteddict[0][1]
+        equalids = []
+        for elem in sorteddict:
+            if elem[1] == maxvalue:
+                equalids.append(elem[0])
+            if elem[1] < maxvalue:
+                break
+        sorteddict = sorteddict[len(equalids):]
+        if len(equalids) > 1:
+            item_selected = availableitems[availableitems.id.isin(equalids)]
+            ids = item_selected["id"]
+            item_selected = item_selected.drop("id", axis=1)
+            base = 10
+
+            for colunm in item_selected.columns:
+                if colunm == "tags":
+                    try:
+                        item_selected[colunm] = item_selected[colunm].map(
+                            lambda x: compute_comparison_string(x, jobrolesdict, base))
+                    except ArithmeticError:
+                        item_selected[colunm] = 1.7976931348623157e+308
+                elif colunm == "title":
+                    try:
+                        item_selected[colunm] = item_selected[colunm].map(
+                            lambda x: compute_comparison_string(x, jobrolesdict, base))
+                    except ArithmeticError:
+                        item_selected[colunm] = 1.7976931348623157e+308
+
+            sum_series = item_selected["tags"] + item_selected["title"]
+            sum_series = sum_series.sort_values(ascending=False)
+            sum_indexes = sum_series.index
+            for index in sum_indexes:
+                orderedratings.append(ids[index])
+        else:
+            orderedratings.append(equalids[0])
+    print(orderedratings)  # TODO remove this and filter more
+    return orderedratings[:5]
+
+
 total_tic = dt.now()
 print("Loading data...")
 # Loading Data
@@ -165,7 +207,7 @@ with open("test.csv", "w") as f:
             items_score = computescore_noratings(items, jobroles_dict)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            print(sorted_id[:10])  # TODO ordinare gli items con stesso punteggio
+            recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
             print(recommended_ids)
             break  # TODO togliere il break
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
