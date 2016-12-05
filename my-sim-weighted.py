@@ -46,7 +46,7 @@ def get_tags_intersection(row, in_tags):
 
 
 def get_comparison(value, comparison):
-    if (value == comparison):
+    if value == comparison:
         return 1
     else:
         return 0
@@ -218,3 +218,7 @@ with open("test.csv", "w") as f:
         print("User {} computed in {}".format(user, dt.now() - tic))
 
 print("Process ended after {}".format(dt.now() - total_tic))
+
+# TODO scrivere extractor per user e jobroles e salvare in nuova matrice
+# TODO modificare intfidf.py per creare la matrice dei jobroles
+# TODO modificare recommend_no_ratings
