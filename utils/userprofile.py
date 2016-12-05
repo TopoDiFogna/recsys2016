@@ -1,4 +1,4 @@
-from tfidf import tf_idfcomputing
+from utils.tfidf import tf_idfcomputing
 import numpy as np
 
 
