@@ -146,7 +146,7 @@ def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
                 orderedratings.append(ids[index])
         else:
             orderedratings.append(equalids[0])
-    print(orderedratings)  # TODO remove this and filter more
+    # print(orderedratings)  # TODO remove this and filter more
     return orderedratings[:5]
 
 
@@ -209,7 +209,6 @@ with open("test.csv", "w") as f:
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
             print(recommended_ids)
-            break  # TODO togliere il break
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}\n".format(user, dt.now() - tic))
 
