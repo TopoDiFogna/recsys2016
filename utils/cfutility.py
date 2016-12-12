@@ -93,7 +93,7 @@ users_ratigns = users[users["user_id"].isin(rating_user_id)]
 # save_sparse_csc("../precomputedData/jobrolesSimilarity.npz",matrix_similarity.tocsc())
 
 matrix_similarity = load_sparse_csc("../precomputedData/jobrolesSimilarity.npz")
-users_no_ratings = users_no_ratings.reset_index()
+users_no_ratings = users_no_ratings.reset_index(drop=True)
 
 def compute_comparison(value, compareTo):
     if (compareTo == 0) :
@@ -107,14 +107,13 @@ def get_top_n_similar_users(user_id, n) :
     user_row = users[users["user_id"] == user_id]
     user_jobroles = user_row.jobroles.values.item(0)
     splitted_string = user_jobroles.split(",")
+    user_to_find = users_ratigns.copy().reset_index(drop=True)
+    top_indexes = []
     if (len(splitted_string) != 0):
         user_index = users_no_ratings[users_no_ratings["user_id"] == user_id].index.tolist()[0]
-        user_row = matrix_similarity.getrow(user_index).toarray()
-        user_row = -np.sort(-user_row)
-        user_row = np.squeeze(user_row).tolist()
-        return user_row[:n]
+        user_row = np.squeeze(matrix_similarity.getrow(user_index).toarray())
+        top_indexes = user_row.argsort()[-n:][::-1]
     else:
-        user_to_find = users_ratigns.copy().reset_index(drop=True)
         userdf = user_to_find .drop(["user_id","jobroles","country","region","experience_n_entries_class","experience_years_experience","edu_degree","edu_fieldofstudies","experience_years_in_current"], axis=1)
         columns_names = userdf.columns
         for column in columns_names:
@@ -122,11 +121,11 @@ def get_top_n_similar_users(user_id, n) :
         sum_series = userdf["career_level"] + userdf["discipline_id"] + userdf["industry_id"]
         sum_series = sum_series.sort_values(ascending=False)
         top_indexes = sum_series.index.tolist()[:n]
-        result =[]
-        for index in top_indexes :
-            target = user_to_find.iloc[[index]]
-            result.append(target["user_id"].values.item(0))
-        return result
+    result =[]
+    for index in top_indexes :
+        target = user_to_find.iloc[[index]]
+        result.append(target["user_id"].values.item(0))
+    return result
 
 # users_no_ratings_ids = users_no_ratings.user_id.values
 # print(get_top_n_similar_users(users_no_ratings_ids.item(0),5))
