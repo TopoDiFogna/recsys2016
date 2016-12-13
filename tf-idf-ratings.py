@@ -203,22 +203,16 @@ with open("test.csv", "w") as f:
             print(recommended_ids)
 
         else:
-            print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            top_similar_users = get_top_n_similar_users(user, 10)
+            print("USER {} has no ratings, recommendations done based on similar users".format(user))
+            top_similar_users = get_top_n_similar_users(user, 5)
             recommended_ids = {}
             for similar_user in top_similar_users:
-                titles_dict, tags_dict = createdictionary(similar_user, interactions, items, tag_matrix, title_matrix,
-                                                          tags, titles)
-                alreadyClickedItems = getuserratings(user, interactions)
-                if len(titles_dict) > 0 or len(tags_dict) > 0:
-                    items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems)
-                    sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-                    sorted_id = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
-                    for job in sorted_id:
-                        if job not in recommended_ids:
-                            recommended_ids[job] = 1
-                        else:
-                            recommended_ids[job] += 1
+                similar_ratings = getuserratings(similar_user, interactions)
+                for rating in similar_ratings:
+                    if rating not in recommended_ids:
+                        recommended_ids[rating] = 1
+                    else:
+                        recommended_ids[rating] += 1
             recommended_ids = sorted(recommended_ids.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = [j_id[0] for j_id in recommended_ids[:5]]
             print(recommended_ids)
