@@ -3,8 +3,9 @@ import numpy as np
 import operator
 from datetime import datetime as dt
 
-from utils.userprofile import createdictionary, getuserratings, createdictionary_noratings
+from utils.userprofile import createdictionary, getuserratings
 from utils.dataloading import load_sparse_csc
+from utils.cfutility import get_top_n_similar_users
 
 
 def compute_comparison(value, dictionary, base):
@@ -203,11 +204,23 @@ with open("test.csv", "w") as f:
 
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
-            items_score = computescore_noratings(items, jobroles_dict)
-            # Sort by score
-            sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
+            top_similar_users = get_top_n_similar_users(user, 10)
+            recommended_ids = {}
+            for similar_user in top_similar_users:
+                titles_dict, tags_dict = createdictionary(similar_user, interactions, items, tag_matrix, title_matrix,
+                                                          tags, titles)
+                alreadyClickedItems = getuserratings(user, interactions)
+                if len(titles_dict) > 0 or len(tags_dict) > 0:
+                    items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems)
+                    sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+                    sorted_id = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
+                    for job in sorted_id:
+                        if job not in recommended_ids:
+                            recommended_ids[job] = 1
+                        else:
+                            recommended_ids[job] += 1
+            recommended_ids = sorted(recommended_ids.items(), key=operator.itemgetter(1), reverse=True)
+            recommended_ids = [j_id[0] for j_id in recommended_ids[:5]]
             print(recommended_ids)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}\n".format(user, dt.now() - tic))
