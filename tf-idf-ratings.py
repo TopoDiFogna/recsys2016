@@ -31,22 +31,22 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
+def computescore(itemdf, dictonary, alreadyclickeditems):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
     for column in columns_names:
         if column == "tags":
-            itemdf[column] = itemdf[column].map(lambda x: compute_comparison_string(x, tagsdict, 0))
+            itemdf[column] = itemdf[column].map(lambda x: compute_comparison_string(x, dictonary, 0))
         elif column == "title":
-            itemdf[column] = itemdf[column].map(lambda x: compute_comparison_string(x, titlesdict, 0))
+            itemdf[column] = itemdf[column].map(lambda x: compute_comparison_string(x, dictonary, 0))
 
     sum_series = itemdf["tags"] + itemdf["title"]
-    dictionary = dict(zip(items_ids.values, sum_series.values))
+    result_dict = dict(zip(items_ids.values, sum_series.values))
     for item in alreadyclickeditems:
-        if item in dictionary:
-            dictionary[item] = 0
-    return dictionary
+        if item in result_dict:
+            result_dict[item] = 0
+    return result_dict
 
 
 def computescore_noratings(itemdf, jobrolesdict):
@@ -65,7 +65,7 @@ def computescore_noratings(itemdf, jobrolesdict):
 
 
 # questo metodo serve per riordinare le recommendations con lo stesso ordine
-def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
+def order_ratings(sorteddict, dictonary, availableitems):
     orderedratings = []
     while len(orderedratings) < 5:
         maxvalue = sorteddict[0][1]
@@ -88,13 +88,13 @@ def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
                 if colunm == "tags":
                     try:
                         item_selected[colunm] = item_selected[colunm].map(
-                            lambda x: compute_comparison_string(x, tagsdict, base))
+                            lambda x: compute_comparison_string(x, dictonary, base))
                     except ArithmeticError:
                         item_selected[colunm] = 1.7976931348623157e+308
                 elif colunm == "title":
                     try:
                         item_selected[colunm] = item_selected[colunm].map(
-                            lambda x: compute_comparison_string(x, titlesdict, base))
+                            lambda x: compute_comparison_string(x, dictonary, base))
                     except ArithmeticError:
                         item_selected[colunm] = 1.7976931348623157e+308
 
@@ -146,7 +146,6 @@ def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
                 orderedratings.append(ids[index])
         else:
             orderedratings.append(equalids[0])
-    # print(orderedratings)  # TODO remove this and filter more
     return orderedratings[:5]
 
 
@@ -191,14 +190,14 @@ with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
     for user in user_ids:
         tic = dt.now()
-        titles_dict, tags_dict = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
+        user_dict = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
-        if len(titles_dict) > 0 or len(tags_dict) > 0:
-            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems)
+        if len(user_dict) > 0:
+            items_score = computescore(available_items, user_dict, alreadyClickedItems)
             # Sort by score
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
+            recommended_ids = order_ratings(sorted_id, user_dict, available_items)
             print(recommended_ids)
 
         else:

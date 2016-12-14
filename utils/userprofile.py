@@ -24,8 +24,7 @@ def get_item_index_form_id(itemid, itemsdf):
 
 
 def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, tagdf, titledf):
-    titledict = {}
-    tagsdict = {}
+    user_dict = {}
     user_ratings = getuserratings(userid, interactionsdf)
     for rated_item in user_ratings:
         item_profile = getitemprofile(rated_item, itemsdf)
@@ -35,19 +34,19 @@ def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, 
                 titles = item_profile.title.split(',')
                 if not (titles[0] == "0"):
                     for title in titles:
-                        if title not in titledict:
-                            titledict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
+                        if title not in user_dict:
+                            user_dict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
                         else:
-                            titledict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
+                            user_dict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
             elif key == "tags":
                 tags = item_profile.tags.split(',')
                 if not (tags[0] == "0"):
                     for tag in tags:
-                        if tag not in tagsdict:
-                            tagsdict[tag] = tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
+                        if tag not in user_dict:
+                            user_dict[tag] = tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
                         else:
-                            tagsdict[tag] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
-    return titledict, tagsdict
+                            user_dict[tag] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
+    return user_dict
 
 
 def getuserprofile(userid, userdf):
