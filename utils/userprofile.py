@@ -9,7 +9,7 @@ def getuserratings(userid, interactionsdf):
     if sampleinteractions.empty:
         return np.array([])
     else:
-        return sampleinteractions.item_id.values
+        return sampleinteractions.to_dict("index")
 
 
 # Returns a dataframe containing the info of the given item
@@ -28,25 +28,34 @@ def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, 
     tagsdict = {}
     user_ratings = getuserratings(userid, interactionsdf)
     for rated_item in user_ratings:
-        item_profile = getitemprofile(rated_item, itemsdf)
-        index_item = get_item_index_form_id(rated_item, itemsdf)
+        item_id = user_ratings[rated_item]["item_id"]
+        interaction = user_ratings[rated_item]["interaction_type"]
+        item_profile = getitemprofile(item_id, itemsdf).drop(["career_level","discipline_id","industry_id","country","region","latitude","longitude","employment"],axis=0)
+        index_item = get_item_index_form_id(item_id, itemsdf)
         for key in item_profile.index.values:
             if key == "title":
                 titles = item_profile.title.split(',')
                 if not (titles[0] == "0"):
                     for title in titles:
                         if title not in titledict:
-                            titledict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
+                            titledict[title] = {"weights" :tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)]) * interaction,"inter" : interaction}
                         else:
-                            titledict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
+                            titledict[title]["weights"] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
+                            titledict[title]["inter"] += interaction
             elif key == "tags":
                 tags = item_profile.tags.split(',')
                 if not (tags[0] == "0"):
                     for tag in tags:
                         if tag not in tagsdict:
-                            tagsdict[tag] = tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
+                            tagsdict[tag] = {"weights" :tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)]) * interaction,"inter" : interaction}
                         else:
-                            tagsdict[tag] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
+                            tagsdict[tag]["weights"] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
+                            tagsdict[tag]["inter"] += interaction
+    for t in titledict:
+        titledict[t] = titledict[t]["weights"]/titledict[t]["inter"]
+    for ta in tagsdict :
+        tagsdict[ta] = tagsdict[ta]["weights"] / tagsdict[ta]["inter"]
+
     return titledict, tagsdict
 
 
