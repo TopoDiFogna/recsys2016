@@ -38,24 +38,17 @@ def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, 
                 if not (titles[0] == "0"):
                     for title in titles:
                         if title not in titledict:
-                            titledict[title] = {"weights" :tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)]) * interaction,"inter" : interaction}
+                            titledict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)]) * interaction
                         else:
-                            titledict[title]["weights"] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
-                            titledict[title]["inter"] += interaction
+                            titledict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)]) * interaction
             elif key == "tags":
                 tags = item_profile.tags.split(',')
                 if not (tags[0] == "0"):
                     for tag in tags:
                         if tag not in tagsdict:
-                            tagsdict[tag] = {"weights" :tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)]) * interaction,"inter" : interaction}
+                            tagsdict[tag] = tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)]) * interaction
                         else:
-                            tagsdict[tag]["weights"] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)])
-                            tagsdict[tag]["inter"] += interaction
-    for t in titledict:
-        titledict[t] = titledict[t]["weights"]/titledict[t]["inter"]
-    for ta in tagsdict :
-        tagsdict[ta] = tagsdict[ta]["weights"] / tagsdict[ta]["inter"]
-
+                            tagsdict[tag] += tf_idfcomputing(tag_matrix, index_item, tagdf.loc[int(tag)]) * interaction
     return titledict, tagsdict
 
 
