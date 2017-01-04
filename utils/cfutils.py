@@ -83,7 +83,3 @@ def get_top_n_similar_users(user_id, n):
         target = rating_user_array[index]
         result.append(target)
     return result
-
-print(type(rating_user_array))
-user = rating_user_array[0]
-get_top_n_similar_users(user, 5)
