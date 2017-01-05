@@ -12,9 +12,9 @@ import math as m
 # tagdf = pd.read_csv("../precomputedData/tag_matrix.csv", header=0)
 # titledf = pd.read_csv("../precomputedData/title_matrix.csv", header=0)
 # jobrolesdf = pd.read_csv("../precomputedData/jobrole_matrix.csv", header=0)
-interactions = pd.read_table("../data/interactions.csv", sep="\t", header=0)
+interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
-matrix_similarity = load_sparse_csc("../precomputedData/userRatingSimilarity.npz")
+matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity.npz")
 rating_user_array = interactions.user_id.unique().tolist()
 
 def save_sparse_csc(filename, array):
