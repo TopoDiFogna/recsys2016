@@ -5,6 +5,7 @@ from datetime import datetime as dt
 
 from utils.userprofile import createdictionary, getuserratings, createdictionary_noratings
 from utils.dataloading import load_sparse_csc
+from utils.cfutils import get_top_n_similar_users
 
 
 def compute_comparison(value, dictionary, base):
@@ -31,7 +32,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
+def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -46,6 +47,10 @@ def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems):
     for item in alreadyclickeditems:
         if item in dictionary:
             dictionary[item] = 0
+    for item in dictionary:
+        for item2 in sorted_similar_items_dict:
+            if item == item2[0]:
+                dictionary[item] *= item2[1]
     return dictionary
 
 
@@ -150,6 +155,19 @@ def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
     return orderedratings[:5]
 
 
+def create_similar_dict(userid, already_clicked, interactiondf):
+    dictionary = {}
+    top_n = get_top_n_similar_users(userid, 5)
+    for similar_user in top_n:
+        for item in list(set(getuserratings(similar_user, interactiondf))):
+            if item not in already_clicked:
+                if item not in dictionary:
+                    dictionary[item] = 2
+                else:
+                    dictionary[item] += 1
+    return dictionary
+
+
 total_tic = dt.now()
 print("Loading data...")
 # Loading Data
@@ -195,8 +213,13 @@ with open("test.csv", "w") as f:
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
-            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems)
+            # Items clicked by similar users
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions)
+            sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
+
+            # Items that can be interesting for the user
             # Sort by score
+            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems, sorted_similar_items)
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
