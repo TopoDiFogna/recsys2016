@@ -32,7 +32,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items):
+def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -48,7 +48,7 @@ def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_simil
         if item in dictionary:
             dictionary[item] = 0
     for item in dictionary:
-        for item2 in sorted_similar_items:
+        for item2 in sorted_similar_items_dict:
             if item == item2[0]:
                 dictionary[item] *= item2[1]
     return dictionary
@@ -223,7 +223,6 @@ with open("test.csv", "w") as f:
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
-            break
 
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
