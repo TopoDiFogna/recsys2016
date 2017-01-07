@@ -155,9 +155,9 @@ def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
     return orderedratings[:5]
 
 
-def create_similar_dict(userid, already_clicked, interactiondf):
+def create_similar_dict(userid, already_clicked, interactiondf, n):
     dictionary = {}
-    top_n = get_top_n_similar_users(userid, 5)
+    top_n = get_top_n_similar_users(userid, n)
     for similar_user in top_n:
         for item in list(set(getuserratings(similar_user, interactiondf))):
             if item not in already_clicked:
@@ -214,7 +214,7 @@ with open("test.csv", "w") as f:
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions)
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,10)
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items that can be interesting for the user
