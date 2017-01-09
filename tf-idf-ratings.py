@@ -214,7 +214,7 @@ with open("test.csv", "w") as f:
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,10)
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items that can be interesting for the user
