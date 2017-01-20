@@ -93,3 +93,4 @@ ENV/
 
 recommendations.csv
 test.csv
+precomputedData/userRatingCBF.npz
