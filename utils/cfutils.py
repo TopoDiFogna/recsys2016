@@ -16,6 +16,8 @@ interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
 rating_user_array = interactions.user_id.unique().tolist()
 
+matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity.npz").tocsr()
+
 
 def save_sparse_csc(filename, array):
     np.savez(filename, data=array.data, indices=array.indices,
@@ -77,7 +79,6 @@ def create_user_rating_matrix_similarity():
 
 
 def get_top_n_similar_users(user_id, n):
-    matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity.npz").tocsr()
     user_index = rating_user_array.index(user_id)
     user_row = np.squeeze(matrix_similarity.getrow(user_index).toarray())
     np.put(user_row, user_index, 0)

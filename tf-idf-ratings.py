@@ -6,7 +6,7 @@ from datetime import datetime as dt
 from utils.userprofile import createdictionary, getuserratings, createdictionary_noratings
 from utils.dataloading import load_sparse_csc
 from utils.cfutils import get_top_n_similar_users
-from utils.cbfutils import get_top_n_similar_item, get_top_n_similar_users_from_jobroles
+from utils.cbfutils import get_top_n_similar_users_from_jobroles
 
 
 def compute_comparison(value, dictionary, base):
@@ -33,7 +33,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict, smilar_clicked_items):
+def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -222,12 +222,12 @@ with open("test.csv", "w") as f:
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items similar to the ones clicked by the user
-            similar_items = get_top_n_similar_item(user, 15)
+            # similar_items = get_top_n_similar_item(user, 15)
 
             # Items that can be interesting for the user
             # Sort by score
             items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems,
-                                       sorted_similar_items, similar_items)
+                                       sorted_similar_items)
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
@@ -242,13 +242,22 @@ with open("test.csv", "w") as f:
                 sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
                 recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
             else:
-                dictionary = {}
-                for similar_user in similar_users:
-                    for item in list(set(getuserratings(similar_user, interactions))):
-                            if item not in dictionary:
-                                dictionary[item] = 1
+                dictionary_no_ratings = {}  # this contains the items clicked by similar users and number of clicks
+                for similar_user_no_ratings in similar_users:
+                    no_interaction_similar_user_ratings = list(set(getuserratings(similar_user_no_ratings, interactions)))
+                    for similar_user_item in no_interaction_similar_user_ratings:
+                            if similar_user_item not in dictionary_no_ratings:
+                                dictionary_no_ratings[similar_user_item] = 1
                             else:
-                                dictionary[item] += 1
+                                dictionary_no_ratings[similar_user_item] += 1
+                sorted_similar_items = sorted(dictionary_no_ratings.items(), key=operator.itemgetter(1), reverse=True)
+                jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
+                items_filtered = pd.DataFrame()
+                for item in sorted_similar_items:
+                    items_filtered = items_filtered.append(items[items["id"] == item[0]])
+                items_score = computescore_noratings(items_filtered, jobroles_dict)
+                sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+                recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}\n".format(user, dt.now() - tic))
