@@ -33,7 +33,7 @@ def compute_comparison_string(value, dictionary, base):
         return 0
 
 
-def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict,smilar_clicked_items):
+def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_similar_items_dict, smilar_clicked_items):
     items_ids = itemdf["id"]
     itemdf = itemdf.drop("id", axis=1)
     columns_names = itemdf.columns
@@ -206,7 +206,7 @@ jobroles = pd.Series(index=jobrolesdf.id, data=np.arange(jobrolesdf.index.size))
 #
 # End of prepocessing data
 
-print("Ended preprocessing in {}".format(dt.now()-loading_time))
+print("Ended preprocessing in {}".format(dt.now() - loading_time))
 print("Starting recommending!")
 
 with open("test.csv", "w") as f:
@@ -218,15 +218,16 @@ with open("test.csv", "w") as f:
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions, 21)
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items similar to the ones clicked by the user
-            similar_items= get_top_n_similar_item(user,15)
+            similar_items = get_top_n_similar_item(user, 15)
 
             # Items that can be interesting for the user
             # Sort by score
-            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems, sorted_similar_items,similar_items)
+            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems,
+                                       sorted_similar_items, similar_items)
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
