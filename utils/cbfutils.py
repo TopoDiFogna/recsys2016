@@ -5,13 +5,13 @@ from scipy.sparse import coo_matrix, vstack
 from utils.dataloading import load_sparse_csc
 import math as m
 
-items = pd.read_table("../data/item_profile.csv", sep="\t", header=0)
-samples = pd.read_csv("../data/sample_submission.csv", header=0)
-users = pd.read_table("../data/user_profile.csv", sep="\t", header=0)
-tagdf = pd.read_csv("../precomputedData/tag_matrix.csv", header=0)
-titledf = pd.read_csv("../precomputedData/title_matrix.csv", header=0)
-jobrolesdf = pd.read_csv("../precomputedData/jobrole_matrix.csv", header=0)
-interactions = pd.read_table("../data/interactions.csv", sep="\t", header=0)
+items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
+samples = pd.read_csv("data/sample_submission.csv", header=0)
+users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
+tagdf = pd.read_csv("precomputedData/tag_matrix.csv", header=0)
+titledf = pd.read_csv("precomputedData/title_matrix.csv", header=0)
+jobrolesdf = pd.read_csv("precomputedData/jobrole_matrix.csv", header=0)
+interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
 samples_user = samples.user_id.values
 rating_user_array = interactions[interactions.user_id.isin(samples_user)].user_id.unique().tolist()
@@ -193,7 +193,7 @@ def create_user_recc_matrix():
 
 
 def get_top_n_similar_item(user_id, n):
-    matrix_similarity = load_sparse_csc("../precomputedData/userRatingCBF.npz").tocsr()
+    matrix_similarity = load_sparse_csc("precomputedData/userRatingCBF.npz").tocsr()
     user_index = rating_user_array.index(user_id)
     user_row = np.squeeze(matrix_similarity.getrow(user_index).toarray())
     top_indexes = user_row.argsort()[-n:][::-1]

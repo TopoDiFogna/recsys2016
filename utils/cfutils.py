@@ -6,12 +6,12 @@ from utils.dataloading import load_sparse_csc
 from scipy.sparse import vstack
 import math as m
 
-items = pd.read_table("../data/item_profile.csv", sep="\t", header=0)
-samples = pd.read_csv("../data/sample_submission.csv", header=0)
-users = pd.read_table("../data/user_profile.csv", sep="\t", header=0)
-tagdf = pd.read_csv("../precomputedData/tag_matrix.csv", header=0)
-titledf = pd.read_csv("../precomputedData/title_matrix.csv", header=0)
-jobrolesdf = pd.read_csv("../precomputedData/jobrole_matrix.csv", header=0)
+items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
+samples = pd.read_csv("data/sample_submission.csv", header=0)
+users = pd.read_table("data/user_profile.csv", sep="\t", header=0)
+tagdf = pd.read_csv("precomputedData/tag_matrix.csv", header=0)
+titledf = pd.read_csv("precomputedData/title_matrix.csv", header=0)
+jobrolesdf = pd.read_csv("precomputedData/jobrole_matrix.csv", header=0)
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
 rating_user_array = interactions.user_id.unique().tolist()

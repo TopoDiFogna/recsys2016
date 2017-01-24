@@ -6,7 +6,7 @@ from datetime import datetime as dt
 from utils.userprofile import createdictionary, getuserratings, createdictionary_noratings
 from utils.dataloading import load_sparse_csc
 from utils.cfutils import get_top_n_similar_users
-from utils.cbfutils import get_top_n_similar_item
+from utils.cbfutils import get_top_n_similar_item, get_top_n_similar_users_from_jobroles
 
 
 def compute_comparison(value, dictionary, base):
@@ -52,9 +52,9 @@ def computescore(itemdf, titlesdict, tagsdict, alreadyclickeditems, sorted_simil
         for item2 in sorted_similar_items_dict:
             if item == item2[0]:
                 dictionary[item] *= item2[1]
-    for item in smilar_clicked_items:
-        if item in dictionary:
-            dictionary[item] *= 1.5
+    # for item in smilar_clicked_items:
+    #     if item in dictionary:
+    #         dictionary[item] *= 1.5
     return dictionary
 
 
@@ -234,11 +234,21 @@ with open("test.csv", "w") as f:
 
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
-            items_score = computescore_noratings(items, jobroles_dict)
-            # Sort by score
-            sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
+            similar_users = get_top_n_similar_users_from_jobroles(user, 5)
+            if similar_users == -1:
+                jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
+                items_score = computescore_noratings(items, jobroles_dict)
+                # Sort by score
+                sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+                recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
+            else:
+                dictionary = {}
+                for similar_user in similar_users:
+                    for item in list(set(getuserratings(similar_user, interactions))):
+                            if item not in dictionary:
+                                dictionary[item] = 1
+                            else:
+                                dictionary[item] += 1
             print(recommended_ids)
         f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         print("User {} computed in {}\n".format(user, dt.now() - tic))
