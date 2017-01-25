@@ -282,9 +282,6 @@ def get_top_n_similar_users_from_jobroles(user_id, n):
     jobrole_array = users[users["user_id"] == user_id].jobroles.values
     if not jobrole_array:
         return -1
-    matrix_similarity = load_sparse_csc("precomputedData/jobroleUserRating.npz").tocsr()
-    users_with_interactions = list(set(interactions.user_id.values))
-    sample_users_no_interactions = [user for user in samples_user if user not in users_with_interactions]
     user_index = sample_users_no_interactions.index(user_id)
     user_row = np.squeeze(matrix_similarity.getrow(user_index).toarray())
     top_indexes = user_row.argsort()[-n:][::-1]
@@ -295,6 +292,9 @@ def get_top_n_similar_users_from_jobroles(user_id, n):
     return result
 
 
+matrix_similarity = load_sparse_csc("precomputedData/jobroleUserRating.npz").tocsr()
+users_with_interactions = list(set(interactions.user_id.values))
+sample_users_no_interactions = [user for user in samples_user if user not in users_with_interactions]
 # create_jobrole_content_matrix()
 # normalize_jobrole_content_matrix()
 # create_user_similarity_matrix_from_jobrole()
