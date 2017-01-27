@@ -14,32 +14,35 @@ import math as m
 # jobrolesdf = pd.read_csv("../precomputedData/jobrole_matrix.csv", header=0)
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
-matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity.npz")
+matrix_similarity = load_sparse_csc("../precomputedData/userRatingSimilarity_IP.npz").tocsr()
 rating_user_array = interactions.user_id.unique().tolist()
 
 def save_sparse_csc(filename, array):
     np.savez(filename, data=array.data, indices=array.indices,
              indptr=array.indptr, shape=array.shape)
 
-def create_user_rating_matrix() :
+def create_user_rating_matrix():
     items_series = pd.Series(index=items.id, data=np.arange(items.index.size))
     print("Computing Sparse COO matrix")
     columns = []
     rows = []
+    data = []
     index = 0
     tic = dt.now()
     for user in rating_user_array:
-        item_clicked = interactions[interactions["user_id"] == user].item_id.unique()
+        interaction_filtered = interactions[interactions["user_id"] == user]
+        item_clicked = interaction_filtered.item_id.unique()
         for item in item_clicked:
             rows.append(index)
             columns.append(items_series.loc[int(item)])
+            data.append(interaction_filtered[interaction_filtered["item_id"] == item].values.size)
         index += 1
-    data = np.ones_like(columns)
-    user_rating_matrix = coo_matrix((data, (rows, columns)), shape=(rating_user_array.size, items_series.size))
+        print("User computed in {}".format(dt.now() - tic))
+    user_rating_matrix = coo_matrix((data, (rows, columns)), shape=(len(rating_user_array), items_series.size))
     print("Coo matrix computed in: {}".format(dt.now() - tic))
 
     user_rating_matrix = user_rating_matrix.tocsc()
-    save_sparse_csc("../precomputedData/user_rating_matrix", user_rating_matrix)
+    save_sparse_csc("../precomputedData/user_rating_matrix_IP", user_rating_matrix)
 
 def normalize_user_rating_matrix():
     user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix.npz").tocsr()
@@ -58,7 +61,7 @@ def normalize_user_rating_matrix():
     save_sparse_csc("../precomputedData/userRatingsMatrixNormalized.npz",user_rating_matrix_Normalized.tocsc())
 
 def create_user_rating_matrix_similarity():
-    user_rating_matrix = load_sparse_csc("../precomputedData/userRatingsMatrixNormalized.npz")
+    user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix_IP.npz")
     num_rows = user_rating_matrix.shape[0]
     rows_array = np.arange(num_rows)
 
@@ -70,7 +73,7 @@ def create_user_rating_matrix_similarity():
             matrix_similarity = vstack([matrix_similarity, new_row])
         print("user {} computed in: {}".format(index,dt.now() - tic))
 
-    save_sparse_csc("../precomputedData/userRatingSimilarity.npz",matrix_similarity.tocsc())
+    save_sparse_csc("../precomputedData/userRatingSimilarity_IP.npz",matrix_similarity.tocsc())
 
 def get_top_n_similar_users(user_id, n):
     top_indexes = []
