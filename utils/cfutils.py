@@ -4,6 +4,7 @@ import numpy as np
 from scipy.sparse import coo_matrix
 from utils.dataloading import *
 from scipy.sparse import vstack
+import logging
 import math as m
 
 # items = pd.read_table("../data/item_profile.csv", sep="\t", header=0)

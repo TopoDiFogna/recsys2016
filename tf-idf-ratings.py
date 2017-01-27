@@ -6,6 +6,7 @@ from datetime import datetime as dt
 from utils.userprofile import createdictionary, getuserratings, createdictionary_noratings
 from utils.dataloading import load_sparse_csc
 from utils.cfutils import get_top_n_similar_users
+from utils.mfutils import get_top_n_items
 
 
 def compute_comparison(value, dictionary, base):
@@ -213,15 +214,16 @@ with open("test.csv", "w") as f:
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
-            # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
-            sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
-
-            # Items that can be interesting for the user
-            # Sort by score
-            items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems, sorted_similar_items)
-            sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
+            # # Items clicked by similar users
+            # similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
+            # sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
+            #
+            # # Items that can be interesting for the user
+            # # Sort by score
+            # items_score = computescore(available_items, titles_dict, tags_dict, alreadyClickedItems, sorted_similar_items)
+            # sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+            # recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
+            recommended_ids = get_top_n_items(user,5,alreadyClickedItems)
             print(recommended_ids)
 
         else:
