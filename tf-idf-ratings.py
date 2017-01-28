@@ -237,7 +237,9 @@ with open("test.csv", "w") as f:
             f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            if users[users["user_id"] == user].jobroles.values:
+            user_jobroles = set(users[users["user_id"] == user].jobroles.values)
+            if user_jobroles != {'0'}:
+                print("Jobroles: {}".format(user_jobroles))
                 jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
                 items_score = computescore_noratings(items, jobroles_dict)
                 # Sort by score
