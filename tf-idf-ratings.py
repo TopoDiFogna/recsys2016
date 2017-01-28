@@ -224,7 +224,7 @@ with open("test.csv", "w") as f:
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions, 21)
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items that can be interesting for the user
@@ -249,7 +249,7 @@ with open("test.csv", "w") as f:
                 save_top_recommended_items(recommended_ids)
                 f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
             else:
-                print("User {} has not jobroles, delaying reccomendations".format(user))
+                print("User {} has not jobroles, delaying recommendations".format(user))
                 no_jobrole_user.append(user)
         print("User {} computed in {}\n".format(user, dt.now() - tic))
 
