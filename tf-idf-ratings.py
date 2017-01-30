@@ -168,6 +168,13 @@ def create_similar_dict(userid, already_clicked, interactiondf, n):
     return dictionary
 
 
+def save_top_recommended_items(recommendations):
+    for item in recommendations:
+        if item not in top_recommended_items:
+            top_recommended_items[item] = 1
+        else:
+            top_recommended_items[item] += 1
+
 total_tic = dt.now()
 print("Loading data...")
 # Loading Data
@@ -203,18 +210,21 @@ jobroles = pd.Series(index=jobrolesdf.id, data=np.arange(jobrolesdf.index.size))
 # End of prepocessing data
 
 print("Ended preprocessing in {}".format(dt.now()-loading_time))
-print("Starting recommending!")
+print("Starting recommending!\n")
+top_recommended_items = {}
 
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
+    no_jobrole_user = []
     for user in user_ids:
         tic = dt.now()
+        print("User {}".format(user))
         titles_dict, tags_dict = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
         alreadyClickedItems = getuserratings(user, interactions)
         recommended_ids = []
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
-            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions,21)
+            similar_dict = create_similar_dict(user, alreadyClickedItems, interactions, 21)
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items that can be interesting for the user
@@ -223,16 +233,31 @@ with open("test.csv", "w") as f:
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
-
+            save_top_recommended_items(recommended_ids)
+            f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
-            items_score = computescore_noratings(items, jobroles_dict)
-            # Sort by score
-            sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
-            recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
-            print(recommended_ids)
-        f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
+            user_jobroles = set(users[users["user_id"] == user].jobroles.values)
+            if user_jobroles != {'0'}:
+                print("Jobroles: {}".format(user_jobroles))
+                jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
+                items_score = computescore_noratings(items, jobroles_dict)
+                # Sort by score
+                sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+                recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
+                print(recommended_ids)
+                save_top_recommended_items(recommended_ids)
+                f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
+            else:
+                print("User {} has not jobroles, delaying recommendations".format(user))
+                no_jobrole_user.append(user)
         print("User {} computed in {}\n".format(user, dt.now() - tic))
 
+    print("\nCalculating top recommended items")
+    sorted_recommended_items = sorted(top_recommended_items.items(), key=operator.itemgetter(1), reverse=True)
+    top_5_recommended_items = sorted_recommended_items[:5]
+    print("Top recommended items: " + ' '.join(str(e[0]) for e in top_5_recommended_items))
+    print("Writing file for user with no jobroles")
+    for user in no_jobrole_user:
+        f.write("{},{}\n".format(user, ' '.join(str(e[0]) for e in top_5_recommended_items)))
 print("Process ended after {}".format(dt.now() - total_tic))
