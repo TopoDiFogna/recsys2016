@@ -5,17 +5,17 @@ from implicit import alternating_least_squares
 from scipy.sparse import coo_matrix
 from datetime import datetime as dt
 
-items = pd.read_table("data/item_profile.csv", sep="\t", header=0)
+items = pd.read_table("../data/item_profile.csv", sep="\t", header=0)
 # samples = pd.read_csv("../data/sample_submission.csv", header=0)
 # users = pd.read_table("../data/user_profile.csv", sep="\t", header=0)
 # tagdf = pd.read_csv("../precomputedData/tag_matrix.csv", header=0)
 # titledf = pd.read_csv("../precomputedData/title_matrix.csv", header=0)
 # jobrolesdf = pd.read_csv("../precomputedData/jobrole_matrix.csv", header=0)
-interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
+interactions = pd.read_table("../data/interactions.csv", sep="\t", header=0)
 
 rating_user_array = interactions.user_id.unique().tolist()
-user_factor = np.load("precomputedData/user_factor_matrix.npy")
-item_factor = np.load("precomputedData/item_factor_matrix.npy")
+# user_factor = np.load("precomputedData/user_factor_matrix.npy")
+# item_factor = np.load("precomputedData/item_factor_matrix.npy")
 non_active_items = items[items["active_during_test"] == 0].index.tolist()
 item_list = items.id.values
 
@@ -64,8 +64,8 @@ def bm25_weight(X, K1=100, B=0.8):
     X.data = X.data * (K1 + 1.0) / (K1 * length_norm[X.row] + X.data) * idf[X.col]
     return X
 
-def compute_factor_matrix(factors=50, regularization=0.01,
-                              iterations=500,
+def compute_factor_matrix(factors=750, regularization=0.01,
+                              iterations=100,
                               use_native=True,
                               dtype=np.float32,
                               cg=False):
@@ -105,3 +105,5 @@ def get_top_n_items(user_id, n,already_clicked_items):
         target = item_list[index]
         result.append(target)
     return result
+
+compute_factor_matrix()
