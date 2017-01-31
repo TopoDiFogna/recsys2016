@@ -5,6 +5,7 @@ from scipy.sparse import coo_matrix
 from utils.dataloading import load_sparse_csc
 from scipy.sparse import vstack
 import math as m
+from utils.mfutilstemp import bm25_weight
 
 # items = pd.read_table("../data/item_profile.csv", sep="\t", header=0)
 # samples = pd.read_csv("../data/sample_submission.csv", header=0)
@@ -65,7 +66,8 @@ def normalize_user_rating_matrix():
 
 
 def create_user_rating_matrix_similarity():
-    user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix_IP.npz")
+    user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix_IP.npz").tocoo()
+    user_rating_matrix = bm25_weight(user_rating_matrix).tocsc()
     num_rows = user_rating_matrix.shape[0]
     rows_array = np.arange(num_rows)
 
@@ -77,7 +79,7 @@ def create_user_rating_matrix_similarity():
             matrix_similarity = vstack([matrix_similarity, new_row])
         print("user {} computed in: {}".format(index, dt.now() - tic))
 
-    save_sparse_csc("../precomputedData/userRatingSimilarity_IP.npz", matrix_similarity.tocsc())
+    save_sparse_csc("../precomputedData/userRatingSimilarity_IP_bm25.npz", matrix_similarity.tocsc())
 
 
 def get_top_n_similar_users(user_id, n):
