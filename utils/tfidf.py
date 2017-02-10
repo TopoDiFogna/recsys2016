@@ -2,11 +2,15 @@ import numpy as np
 from math import sqrt, log
 from utils.dataloading import load_sparse_csc
 from scipy.sparse import vstack
+
+# Saves a sparse csc to disk
 def save_sparse_csc(filename, array):
     np.savez(filename, data=array.data, indices=array.indices,
              indptr=array.indptr, shape=array.shape)
 
+
 # questa funzione prende in ingresso una matrice csr NumItem x NumAttr e restituisce la matrice dei df
+# Computing the tf values for every item
 def tfcomputing(attribute_matrix, row_index, col_index):
     lenght_vector = np.squeeze(np.asarray(attribute_matrix.sum(axis=1)))
     num = attribute_matrix[row_index, col_index]
@@ -15,6 +19,7 @@ def tfcomputing(attribute_matrix, row_index, col_index):
     return tf_result
 
 
+# Computing the idf values for every item
 def idfcomputing(attribute_matrix, col_index):
     num_doc = attribute_matrix.shape[0]
     idf_array = np.squeeze(np.asarray(attribute_matrix.sum(axis=0)))
@@ -22,6 +27,7 @@ def idfcomputing(attribute_matrix, col_index):
     return idf_value
 
 
+# After computing tf and idf separately create a matrix with the tf-idf
 def tf_idfcomputing(attribute_matrix, row_index, col_index):
     tf_value = tfcomputing(attribute_matrix, row_index, col_index)
     idf_value = idfcomputing(attribute_matrix, col_index)

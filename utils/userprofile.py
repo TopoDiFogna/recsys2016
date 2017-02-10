@@ -23,23 +23,25 @@ def get_item_index_form_id(itemid, itemsdf):
     return index
 
 
+# This function takes a user and for every click he has extracts the tags and the titles from the item and creates
+# 2 new dictionaries which cointain every title/tag the user has clicked scored used tf_idf method
 def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, tagdf, titledf):
     titledict = {}
     tagsdict = {}
-    user_ratings = getuserratings(userid, interactionsdf)
+    user_ratings = getuserratings(userid, interactionsdf)  # Gets user clicks
     for rated_item in user_ratings:
-        item_profile = getitemprofile(rated_item, itemsdf)
+        item_profile = getitemprofile(rated_item, itemsdf)  # Gets the item prifiles from the dataframe
         index_item = get_item_index_form_id(rated_item, itemsdf)
         for key in item_profile.index.values:
-            if key == "title":
+            if key == "title":  # Take title data from every item
                 titles = item_profile.title.split(',')
                 if not (titles[0] == "0"):
                     for title in titles:
-                        if title not in titledict:
+                        if title not in titledict:  # Create a new entry in the dictionary if the title is not found
                             titledict[title] = tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
-                        else:
+                        else:  # Otherwise just add the score
                             titledict[title] += tf_idfcomputing(title_matrix, index_item, titledf.loc[int(title)])
-            elif key == "tags":
+            elif key == "tags":  # Same thing as above but for tags
                 tags = item_profile.tags.split(',')
                 if not (tags[0] == "0"):
                     for tag in tags:
@@ -50,6 +52,7 @@ def createdictionary(userid, interactionsdf, itemsdf, title_matrix, tag_matrix, 
     return titledict, tagsdict
 
 
+# Extracts the user profile from the dataframe
 def getuserprofile(userid, userdf):
     user_profile = userdf[userdf['user_id'] == userid]
     return user_profile.drop(["user_id"], axis=1).squeeze()
@@ -60,6 +63,7 @@ def get_user_index_form_id(userid, usersdf):
     return index
 
 
+# Same thing as the function createdictionary but based on jobroles for user with no interaction
 def createdictionary_noratings(userid, userdf, jobrole_matrix, jobroledf):
     jobroledict = {}
     user_profile = getuserprofile(userid, userdf)
