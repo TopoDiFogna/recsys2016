@@ -8,6 +8,7 @@ from utils.dataloading import load_sparse_csc
 from utils.cfutils import get_top_n_similar_users
 
 
+# Elevates the score of a item by a certain number
 def compute_comparison(value, dictionary, base):
     if value in dictionary:
         if base == 0:
@@ -21,6 +22,7 @@ def compute_comparison(value, dictionary, base):
         return 0
 
 
+# Splits a string separated by commas and calculates the score for every new substring
 def compute_comparison_string(value, dictionary, base):
     if isinstance(value, str):
         splitted_string = value.split(",")
@@ -69,15 +71,15 @@ def computescore_noratings(itemdf, jobrolesdict):
     return dictionary
 
 
-# questo metodo serve per riordinare le recommendations con lo stesso ordine
+# Reorders the items with the same score in a proper way so we can have better recommendations
 def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
     orderedratings = []
-    while len(orderedratings) < 5:
+    while len(orderedratings) < 5:  # While we have less than 5 items to recommend
         maxvalue = sorteddict[0][1]
         equalids = []
         for elem in sorteddict:
             if elem[1] == maxvalue:
-                equalids.append(elem[0])
+                equalids.append(elem[0])  # Take all the item with the same score
             if elem[1] < maxvalue:
                 break
         sorteddict = sorteddict[len(equalids):]
@@ -89,7 +91,7 @@ def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
             # ho aggiunto questo controllo per evitare l'overflow di float
             base = 10
 
-            for colunm in item_selected.columns:
+            for colunm in item_selected.columns:  # Score again these items to better recommend them
                 if colunm == "tags":
                     try:
                         item_selected[colunm] = item_selected[colunm].map(
@@ -110,7 +112,7 @@ def order_ratings(sorteddict, tagsdict, titlesdict, availableitems):
                 orderedratings.append(ids[index])
         else:
             orderedratings.append(equalids[0])
-    return orderedratings[:5]
+    return orderedratings[:5]  # Return the 5 items with top scores
 
 
 def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
@@ -155,19 +157,23 @@ def order_ratings_nointeractions(sorteddict, jobrolesdict, availableitems):
     return orderedratings[:5]
 
 
+# Gets every item a given user has already clicked and for every other similar user adds 2
+# to this similar user score for every equal item he has clicked that is not already found, 1 otherwise
 def create_similar_dict(userid, already_clicked, interactiondf, n):
     dictionary = {}
-    top_n = get_top_n_similar_users(userid, n)
+    top_n = get_top_n_similar_users(userid, n)  # Get similar users
     for similar_user in top_n:
         for item in list(set(getuserratings(similar_user, interactiondf))):
             if item not in already_clicked:
                 if item not in dictionary:
-                    dictionary[item] = 2
+                    dictionary[item] = 2  # This item has been clicked by both users but it has been seen
+                                          # for the first time
                 else:
-                    dictionary[item] += 1
+                    dictionary[item] += 1   # This item has been clicked by both users but it has been already seen
     return dictionary
 
 
+# Justs saves the number each item is recommended to copute the most recommended items
 def save_top_recommended_items(recommendations):
     for item in recommendations:
         if item not in top_recommended_items:
@@ -199,10 +205,11 @@ print("Prepocessing Data...")
 # Prepocessing data
 #
 user_ids = samples.user_id.values
+# Replaces null values with zeroes for easier computation
 items.fillna(value="0", inplace=True)
 users.fillna(value="0", inplace=True)
 available_items = items[items.active_during_test == 1].drop(
-    ["active_during_test", "created_at", "latitude", "longitude"], axis=1)
+    ["active_during_test", "created_at", "latitude", "longitude"], axis=1)  # Filtering out available items
 tags = pd.Series(index=tagdf.id, data=np.arange(tagdf.index.size))
 titles = pd.Series(index=titledf.id, data=np.arange(titledf.index.size))
 jobroles = pd.Series(index=jobrolesdf.id, data=np.arange(jobrolesdf.index.size))
@@ -215,16 +222,19 @@ top_recommended_items = {}
 
 with open("test.csv", "w") as f:
     f.write("user_id,recommended_items\n")
-    no_jobrole_user = []
+    no_jobrole_user = []  # Here will be stored users that do not have interactions and do not have a jobrole specified
     for user in user_ids:
         tic = dt.now()
         print("User {}".format(user))
+        # Creates a user profile based on past interactions
         titles_dict, tags_dict = createdictionary(user, interactions, items, tag_matrix, title_matrix, tags, titles)
+        # Filters out the items that are already clicked by the user so we do not recommend them again
         alreadyClickedItems = getuserratings(user, interactions)
-        recommended_ids = []
+        recommended_ids = []  # List used to store the recommended items
         if len(titles_dict) > 0 or len(tags_dict) > 0:
             # Items clicked by similar users
             similar_dict = create_similar_dict(user, alreadyClickedItems, interactions, 21)
+            # Sort similar items to that clicked by the user
             sorted_similar_items = sorted(similar_dict.items(), key=operator.itemgetter(1), reverse=True)
 
             # Items that can be interesting for the user
@@ -233,22 +243,26 @@ with open("test.csv", "w") as f:
             sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
             recommended_ids = order_ratings(sorted_id, tags_dict, titles_dict, available_items)
             print(recommended_ids)
+            # Just saves the fact that we're recommending this items so we can then have the most recommended items
             save_top_recommended_items(recommended_ids)
+            # Write to file
             f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
         else:
             print("USER {} has no ratings, recommendations done based on jobroles".format(user))
-            user_jobroles = set(users[users["user_id"] == user].jobroles.values)
-            if user_jobroles != {'0'}:
+            user_jobroles = set(users[users["user_id"] == user].jobroles.values)  # Gets user jobroles
+            if user_jobroles != {'0'}:  # If some jobroles are found
                 print("Jobroles: {}".format(user_jobroles))
-                jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)
-                items_score = computescore_noratings(items, jobroles_dict)
+                jobroles_dict = createdictionary_noratings(user, users, jobroles_matrix, jobroles)  # Create a dictionary
+                items_score = computescore_noratings(items, jobroles_dict)  # Give a score for every item in the dictionary
                 # Sort by score
                 sorted_id = sorted(items_score.items(), key=operator.itemgetter(1), reverse=True)
+                # Reorder if the items have the same score
                 recommended_ids = order_ratings_nointeractions(sorted_id, jobroles_dict, available_items)
                 print(recommended_ids)
+                # Just saves the fact that we're recommending this items so we can then have the most recommended items
                 save_top_recommended_items(recommended_ids)
                 f.write("{},{}\n".format(user, ' '.join(str(e) for e in recommended_ids)))
-            else:
+            else:  # If the user hasa no jobroles just delay the recommendations so we can give the most recommended items
                 print("User {} has not jobroles, delaying recommendations".format(user))
                 no_jobrole_user.append(user)
         print("User {} computed in {}\n".format(user, dt.now() - tic))

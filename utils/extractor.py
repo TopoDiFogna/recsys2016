@@ -31,6 +31,8 @@ def save_sparse_csc(filename, array):
              indptr=array.indptr, shape=array.shape)
 
 
+# This script saves data in a matrix form so it cam be accessed and recomputed faster,
+# normally it is executed only one time
 users = pd.read_table('../data/user_profile.csv', header=0, sep="\t")
 jobrolesSeries = pd.Series()
 users.fillna('0', inplace=True)
