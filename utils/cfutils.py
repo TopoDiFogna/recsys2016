@@ -16,7 +16,7 @@ import math as m
 interactions = pd.read_table("data/interactions.csv", sep="\t", header=0)
 
 # Precomputed data for the user similarity
-matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity_IP.npz").tocsr()
+matrix_similarity = load_sparse_csc("precomputedData/userRatingSimilarity.npz").tocsr()
 rating_user_array = interactions.user_id.unique().tolist()
 
 
