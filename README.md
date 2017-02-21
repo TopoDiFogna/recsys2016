@@ -65,6 +65,8 @@ If you miss some of the file the files in the directory `precomputedData` you ca
 * Comment line 18 in `utils\cfutils.py`
 * Run function `create_user_rating_matrix`  in `utils\cfutils.py`
 
+### Branches
+The master branch holdes the code that scored most in the competition, every other branch is named by the algorithm used to create the recommendations
 
 ### Coding style
 
