@@ -15,7 +15,10 @@ You will also need this pip packages:
 numpy==1.12.0+mkl
 pandas==0.19.2
 scipy==0.18.1
+implict
 ```
+
+Further instructions for implicit library can be found [HERE](https://github.com/benfred/implicit)
 
 ### Installing
 
@@ -58,6 +61,10 @@ If you miss some of the file the files in the directory `precomputedData` you ca
 ###### item_factor_matrix.npy
 * Comment lines 17-18 in `utils\mfutils.py`
 * Run function `compute_factor_matrix()` in `utils\mfutils.py`
+
+###### user_rating_matrix_new.npz
+* Comment lines 17-18 in `utils\mfutils.py`
+* Run function `create_user_rating_matrix` in `utils\mfutils.py`
 
 ### Branches
 The master branch holdes the code that scored most in the competition, every other branch is named by the algorithm used to create the recommendations
