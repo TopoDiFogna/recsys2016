@@ -62,6 +62,10 @@ If you miss some of the file the files in the directory `precomputedData` you ca
 * Comment lines 17-18 in `utils\mfutils.py`
 * Run function `compute_factor_matrix()` in `utils\mfutils.py`
 
+###### user_factor_matrix.npy
+* Comment lines 17-18 in `utils\mfutils.py`
+* Run function `compute_factor_matrix()` in `utils\mfutils.py`
+
 ###### user_rating_matrix_new.npz
 * Comment lines 17-18 in `utils\mfutils.py`
 * Run function `create_user_rating_matrix` in `utils\mfutils.py`
