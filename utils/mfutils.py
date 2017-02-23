@@ -19,9 +19,10 @@ item_factor = np.load("precomputedData/item_factor_matrix.npy")
 non_active_items = items[items["active_during_test"] == 0].index.tolist()
 item_list = items.id.values
 
+
 def save_sparse_csc(filename, array):
-    np.savez(filename, data=array.data, indices=array.indices,
-indptr=array.indptr, shape=array.shape)
+    np.savez(filename, data=array.data, indices=array.indices, indptr=array.indptr, shape=array.shape)
+
 
 def create_user_rating_matrix():
     items_series = pd.Series(index=items.id, data=np.arange(items.index.size))
@@ -48,6 +49,7 @@ def create_user_rating_matrix():
     user_rating_matrix = user_rating_matrix.tocsc()
     save_sparse_csc("../precomputedData/user_rating_matrix_new", user_rating_matrix)
 
+
 def bm25_weight(X, K1=100, B=0.8):
     """ Weighs each row of the sparse matrix of the data by BM25 weighting """
     # calculate idf per term (user)
@@ -71,7 +73,7 @@ def compute_factor_matrix(factors=1000, regularization=0.01,
                               cg=False):
     print("reading data from %s")
     start = dt.now()
-    user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix_new.npz");
+    user_rating_matrix = load_sparse_csc("../precomputedData/user_rating_matrix_new.npz")
     print("read data file in %s", dt.now() - start)
 
     print("weighting matrix by bm25")
@@ -92,10 +94,11 @@ def compute_factor_matrix(factors=1000, regularization=0.01,
     np.save("../precomputedData/user_factor_matrix",user_factors)
     np.save("../precomputedData/item_factor_matrix",item_factors)
 
-def get_top_n_items(user_id, n,already_clicked_items):
+
+def get_top_n_items(user_id, n, already_clicked_items):
     top_indexes = []
     user_index = rating_user_array.index(user_id)
-    recommendations = np.dot(user_factor[user_index],item_factor.transpose())
+    recommendations = np.dot(user_factor[user_index], item_factor.transpose())
     recommendations[non_active_items] = 0
     clicked_index = items[items.id.isin(already_clicked_items)].index.tolist()
     recommendations[clicked_index] = 0
@@ -105,5 +108,3 @@ def get_top_n_items(user_id, n,already_clicked_items):
         target = item_list[index]
         result.append(target)
     return result
-
-# compute_factor_matrix()
